@@ -351,7 +351,12 @@
   let markerSnap=null;
     let db=null, SYNCED=false;
   let _lastFrontier=-1;
-  function chime(){ try{ const ctx=new(window.AudioContext||window.webkitAudioContext)();
+  let _audioCtx=null;
+  function getAudioCtx(){ if(!_audioCtx) _audioCtx=new(window.AudioContext||window.webkitAudioContext)(); return _audioCtx; }
+  // resume audio context on first user interaction
+  document.addEventListener('touchstart',()=>{ try{ getAudioCtx().resume(); }catch(e){} },{once:false,passive:true});
+  document.addEventListener('click',()=>{ try{ getAudioCtx().resume(); }catch(e){} },{once:false,passive:true});
+  function chime(){ try{ const ctx=getAudioCtx(); ctx.resume().then(()=>{
     [[523,0],[659,.15],[784,.3],[1047,.5]].forEach(([f,t])=>{
       const o=ctx.createOscillator(),g=ctx.createGain();
       o.connect(g); g.connect(ctx.destination);
@@ -361,7 +366,7 @@
       g.gain.linearRampToValueAtTime(0,ctx.currentTime+t+.35);
       o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+.4);
     });
-  }catch(e){} }
+  }); }catch(e){} }
   let _toastTimer=null;
   function showToast(leg,time){ const t=document.getElementById('arrToast');
     const m=document.getElementById('arrMsg'); const sb=document.getElementById('arrSub');
@@ -427,7 +432,17 @@
     const local=lsGet(); if(local&&local.legs){ S=local; reconcile(); } else { S=fresh(); }
     if(SYNCED){
       if(READONLY){
-        db.ref(dbpath()).on('value', snap=>{ const v=snap.val(); if(v&&v.legs){
+        // show sound enable prompt for watch view
+    if(READONLY){
+      const sp=document.createElement('div');
+      sp.id='soundprompt';
+      sp.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--line);border-radius:11px;padding:10px 18px;font-size:12px;color:var(--muted);cursor:pointer;z-index:999;text-align:center;';
+      sp.innerHTML='🔔 Tap here to enable arrival sounds';
+      sp.onclick=()=>{ try{ getAudioCtx().resume(); chime(); }catch(e){} sp.remove(); };
+      document.body.appendChild(sp);
+      setTimeout(()=>{ if(sp.isConnected) sp.remove(); },8000);
+    }
+    db.ref(dbpath()).on('value', snap=>{ const v=snap.val(); if(v&&v.legs){
           const prevF=_lastFrontier;
           S=v; markerSnap=v.markerSnap||null; reconcile();
           const newF=S.legs.reduce((fi,l,i)=>l.arrival?i:fi,-1);
