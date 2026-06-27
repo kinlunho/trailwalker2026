@@ -1019,6 +1019,14 @@
     const asf=document.getElementById('actualStartField'); asf.style.display=S.startActual?'flex':'none';
     if(S.startActual)document.getElementById('actualStartInput').value=toLocal(D(S.startActual));
     document.getElementById('cutoffInput').value=S.cutoffH;
+    // populate EmailJS fields — read from localStorage first so they always show
+    try{ const c=JSON.parse(localStorage.getItem('tw2026:emailjs')||'null');
+      if(c&&c.svc){ if(!S.ejsServiceId)S.ejsServiceId=c.svc; if(!S.ejsTemplateId)S.ejsTemplateId=c.tpl||''; if(!S.ejsPublicKey)S.ejsPublicKey=c.key||''; if(c.nums&&!S.smsNumbers.length)S.smsNumbers=c.nums; }
+    }catch(e){}
+    const eSvc=document.getElementById('ejsServiceId'); if(eSvc&&!eSvc.matches(':focus'))eSvc.value=S.ejsServiceId||'';
+    const eTpl=document.getElementById('ejsTemplateId'); if(eTpl&&!eTpl.matches(':focus'))eTpl.value=S.ejsTemplateId||'';
+    const eKey=document.getElementById('ejsPublicKey'); if(eKey&&!eKey.matches(':focus'))eKey.value=S.ejsPublicKey||'';
+    const eNums=document.getElementById('smsNumbers'); if(eNums&&!eNums.matches(':focus'))eNums.value=(S.smsNumbers||[]).join('\n');
 
     const pe=document.getElementById('planEdit'); pe.innerHTML='';
     S.legs.forEach((l,i)=>{
