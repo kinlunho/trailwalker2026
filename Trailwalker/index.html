@@ -924,6 +924,8 @@
         btn.textContent=l.finish?'🏁 Mark finish':'✓ Arrived at '+l.name;
         btn.onclick=()=>{
           l.arrival=new Date().toISOString();
+          // capture position BEFORE clearing marker
+          const arrivalSnap=markerSnap?{lat:markerSnap.lat,lng:markerSnap.lng}:null;
           // reset marker to section end km
           const secEndKm=S.legs.slice(0,i+1).reduce((a,lg)=>a+lg.km,0);
           markerSnap=null; S.markerSnap=null;
@@ -940,13 +942,16 @@
             let etaTxt='';
             if(cc.nextETA&&nextLeg){ etaTxt=' | ETA '+nextLeg.name+': '+cc.nextETA.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
             const aheadTxt=cc.vsTargetMin<=0?' | \u25b2 '+durTxt(-cc.vsTargetMin)+' ahead':' | \u25bc '+durTxt(cc.vsTargetMin)+' behind';
+            const routeMap='https://www.google.com/maps/d/viewer?mid=17KKPiqSM3PdpfHOTeC347SdbvtmKTa4';
+            const posLink=arrivalSnap?' | Position: https://maps.google.com/?q='+arrivalSnap.lat.toFixed(5)+','+arrivalSnap.lng.toFixed(5):'';
             msg='\ud83c\udfc3 TW2026 \u2014 Arrived '+l.name+' at '+arrTime
               +' | '+kmDone+'km done'
               +(spd?' | avg '+spd+' km/h':'')
               +etaTxt
               +aheadTxt
               +' of target'
-              +mapLink();
+              +posLink
+              +' | OTW Route: '+routeMap;
           } catch(e){ msg='\ud83c\udfc3 TW2026 \u2014 Arrived '+l.name+' at '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
           sendSMS(msg);
           save(); render();
