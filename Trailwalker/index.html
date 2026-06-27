@@ -467,7 +467,7 @@
         try{ const snap=await db.ref(dbpath()).once('value'); const v=snap.val();
           if(v&&v.legs){ S=v; markerSnap=v.markerSnap||null; reconcile();
           // restore emailjs config if missing
-          if(!S.ejsServiceId){ try{ db.ref('emailjs_config/'+S.raceId).once('value').then(cs=>{ const c=cs.val(); if(c){ S.ejsServiceId=c.svc||''; S.ejsTemplateId=c.tpl||''; S.ejsPublicKey=c.key||''; if(c.nums)S.smsNumbers=c.nums; lsSet(S); render(); } }); }catch(e){} }
+          if(!S.ejsServiceId) loadEjsConfig();
         } else { pushRemote(); } }catch(e){}
       }
     }
@@ -1102,8 +1102,22 @@
   document.getElementById('startInput').onchange=e=>{ if(e.target.value){S.startPlanned=new Date(e.target.value).toISOString();save();render();} };
   document.getElementById('actualStartInput').onchange=e=>{ if(e.target.value){S.startActual=new Date(e.target.value).toISOString();save();render();} };
   document.getElementById('cutoffInput').onchange=e=>{const v=parseInt(e.target.value,10); if(v>0){S.cutoffH=v;save();render();}};
-  function saveEjsConfig(){ if(SYNCED&&db&&S.ejsServiceId){
-    try{ db.ref('emailjs_config/'+S.raceId).set({svc:S.ejsServiceId,tpl:S.ejsTemplateId,key:S.ejsPublicKey,nums:S.smsNumbers}); }catch(e){} } }
+  function saveEjsConfig(){
+    // always save to localStorage regardless of Firebase
+    try{ localStorage.setItem('tw2026:emailjs', JSON.stringify({svc:S.ejsServiceId,tpl:S.ejsTemplateId,key:S.ejsPublicKey,nums:S.smsNumbers})); }catch(e){}
+    // also save to Firebase if connected
+    if(SYNCED&&db&&S.ejsServiceId){
+      try{ db.ref('emailjs_config/tw2026').set({svc:S.ejsServiceId,tpl:S.ejsTemplateId,key:S.ejsPublicKey,nums:S.smsNumbers}); }catch(e){} } }
+  function loadEjsConfig(){
+    // first try localStorage
+    try{ const c=JSON.parse(localStorage.getItem('tw2026:emailjs')||'null');
+      if(c&&c.svc){ S.ejsServiceId=c.svc; S.ejsTemplateId=c.tpl||''; S.ejsPublicKey=c.key||''; if(c.nums)S.smsNumbers=c.nums; return; }
+    }catch(e){}
+    // fallback to Firebase
+    if(SYNCED&&db){ try{ db.ref('emailjs_config/tw2026').once('value').then(cs=>{ const c=cs.val();
+      if(c){ S.ejsServiceId=c.svc||''; S.ejsTemplateId=c.tpl||''; S.ejsPublicKey=c.key||''; if(c.nums)S.smsNumbers=c.nums;
+        try{ localStorage.setItem('tw2026:emailjs',JSON.stringify({svc:c.svc,tpl:c.tpl,key:c.key,nums:c.nums})); }catch(e){}
+        render(); } }); }catch(e){} } }
   document.getElementById('ejsServiceId').oninput=e=>{ S.ejsServiceId=e.target.value.trim(); save(); saveEjsConfig(); };
   document.getElementById('ejsTemplateId').oninput=e=>{ S.ejsTemplateId=e.target.value.trim(); save(); saveEjsConfig(); };
   document.getElementById('ejsPublicKey').oninput=e=>{ S.ejsPublicKey=e.target.value.trim(); save(); saveEjsConfig(); };
@@ -1115,6 +1129,7 @@
   document.getElementById('resetBtn').onclick=()=>{ if(window.__oxEdit)window.__oxEdit.clear(); S=fresh(); save(); render(); };
 
   load().then(()=>{
+    loadEjsConfig();
     if(READONLY){ document.getElementById('editToggle').style.display='none'; document.getElementById('gpsBtn').style.display='none'; }
     render(); updateSyncbar(); initMap(); if(_map)updateMap(compute()); try{_mapHidden=(localStorage.getItem('oxfam_maphidden')==='1');}catch(e){} setMap(_mapHidden); tickClock(); setInterval(tickClock,1000);
     setInterval(()=>{ if(!(document.activeElement&&document.activeElement.tagName==='INPUT')) render(); },10000);
