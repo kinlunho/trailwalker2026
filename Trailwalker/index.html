@@ -465,7 +465,10 @@
         db.ref(dbpath()+'/markerSnap').on('value', snap=>{ const v=snap.val(); markerSnap=v||null; render(); });
       } else {
         try{ const snap=await db.ref(dbpath()).once('value'); const v=snap.val();
-          if(v&&v.legs){ S=v; markerSnap=v.markerSnap||null; reconcile(); } else { pushRemote(); } }catch(e){}
+          if(v&&v.legs){ S=v; markerSnap=v.markerSnap||null; reconcile();
+          // restore emailjs config if missing
+          if(!S.ejsServiceId){ try{ db.ref('emailjs_config/'+S.raceId).once('value').then(cs=>{ const c=cs.val(); if(c){ S.ejsServiceId=c.svc||''; S.ejsTemplateId=c.tpl||''; S.ejsPublicKey=c.key||''; if(c.nums)S.smsNumbers=c.nums; lsSet(S); render(); } }); }catch(e){} }
+        } else { pushRemote(); } }catch(e){}
       }
     }
   }
@@ -1085,10 +1088,12 @@
   document.getElementById('startInput').onchange=e=>{ if(e.target.value){S.startPlanned=new Date(e.target.value).toISOString();save();render();} };
   document.getElementById('actualStartInput').onchange=e=>{ if(e.target.value){S.startActual=new Date(e.target.value).toISOString();save();render();} };
   document.getElementById('cutoffInput').onchange=e=>{const v=parseInt(e.target.value,10); if(v>0){S.cutoffH=v;save();render();}};
-  document.getElementById('ejsServiceId').oninput=e=>{ S.ejsServiceId=e.target.value.trim(); save(); };
-  document.getElementById('ejsTemplateId').oninput=e=>{ S.ejsTemplateId=e.target.value.trim(); save(); };
-  document.getElementById('ejsPublicKey').oninput=e=>{ S.ejsPublicKey=e.target.value.trim(); save(); };
-  document.getElementById('smsNumbers').oninput=e=>{ S.smsNumbers=e.target.value.split('\n').map(n=>n.trim()).filter(Boolean); save(); };
+  function saveEjsConfig(){ if(SYNCED&&db&&S.ejsServiceId){
+    try{ db.ref('emailjs_config/'+S.raceId).set({svc:S.ejsServiceId,tpl:S.ejsTemplateId,key:S.ejsPublicKey,nums:S.smsNumbers}); }catch(e){} } }
+  document.getElementById('ejsServiceId').oninput=e=>{ S.ejsServiceId=e.target.value.trim(); save(); saveEjsConfig(); };
+  document.getElementById('ejsTemplateId').oninput=e=>{ S.ejsTemplateId=e.target.value.trim(); save(); saveEjsConfig(); };
+  document.getElementById('ejsPublicKey').oninput=e=>{ S.ejsPublicKey=e.target.value.trim(); save(); saveEjsConfig(); };
+  document.getElementById('smsNumbers').oninput=e=>{ S.smsNumbers=e.target.value.split('\n').map(n=>n.trim()).filter(Boolean); save(); saveEjsConfig(); };
   document.getElementById('testSmsBtn').onclick=()=>{ sendSMS('\ud83c\udfc3 Trailwalker 2026 test SMS — notifications are working!'); };
   document.getElementById('addLegBtn').onclick=()=>{ const n={name:'New section',route:'',km:5,d:2,sup:false,brk:7,asc:0,arrival:null,departure:null};
     n.walk=paceWalk(S.legs,n,S.paceMin); S.legs.splice(S.legs.length-1,0,n); markFinish(S.legs); save(); render(); };
