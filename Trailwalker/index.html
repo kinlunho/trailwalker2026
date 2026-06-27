@@ -652,18 +652,32 @@
   function sendSMS(message){
     const svcId=S.ejsServiceId; const tplId=S.ejsTemplateId; const pubKey=S.ejsPublicKey;
     const emails=S.smsNumbers;
-    if(!svcId||!tplId||!pubKey||!emails||!emails.length) return;
     const st=document.getElementById('smsStatus');
-    if(st) st.textContent='Sending email...';
-    if(window.emailjs) window.emailjs.init({publicKey:pubKey});
-    let sent=0;
+    // Guard: show what's missing
+    if(!svcId||!tplId||!pubKey){
+      if(st) st.textContent='Missing: '+((!svcId)?'Service ID ':'')+(!tplId?'Template ID ':'')+(!pubKey?'Public Key':'');
+      return;
+    }
+    if(!emails||!emails.length){
+      if(st) st.textContent='No email addresses set';
+      return;
+    }
+    if(!window.emailjs){
+      if(st) st.textContent='EmailJS library not loaded — check internet connection';
+      return;
+    }
+    if(st) st.textContent='Sending...';
+    window.emailjs.init({publicKey:pubKey});
+    let sent=0, failed=0;
     emails.forEach(email=>{
       if(!email) return;
       window.emailjs.send(svcId,tplId,{to_email:email,message:message,subject:'Trailwalker 2026 Update'})
-      .then(()=>{ sent++;
-        if(st) st.textContent='Email sent to '+sent+'/'+emails.length;
-        setTimeout(()=>{ if(st) st.textContent=''; },5000);
-      }).catch(e=>{ if(st) st.textContent='Email error: '+(e.text||e.message); });
+      .then(r=>{ sent++;
+        if(st) st.textContent='✓ Sent '+sent+'/'+(sent+failed)+' (status '+r.status+')';
+        setTimeout(()=>{ if(st) st.textContent=''; },8000);
+      }).catch(e=>{ failed++;
+        if(st) st.textContent='✗ Error: '+(e.text||e.message||JSON.stringify(e));
+      });
     });
   }
 
