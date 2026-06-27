@@ -1,4 +1,5 @@
 <meta charset="UTF-8">
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -305,11 +306,14 @@
     <h3 style="margin-top:16px">Sections — edit, add or remove</h3>
     <div id="planEdit"></div>
     <button class="btn" id="addLegBtn" style="margin-top:4px">+ Add section</button>
-    <h3 style="margin-top:16px">SMS notifications</h3>
-    <div class="field"><label for="workerUrl">Worker URL</label><input type="url" id="workerUrl" placeholder="https://your-worker.workers.dev" style="width:100%;text-align:left"></div>
-    <div style="margin-top:8px;font-size:12px;color:var(--muted)">Phone numbers to notify on each checkpoint (international format, one per line e.g. +85291234567)</div>
-    <textarea id="smsNumbers" rows="4" style="width:100%;margin-top:6px;background:var(--card);border:1px solid var(--line);border-radius:8px;color:var(--ink);font:inherit;font-size:13px;padding:8px;color-scheme:dark;resize:vertical" placeholder="+85291234567&#10;+85298765432"></textarea>
-    <button class="btn" id="testSmsBtn" style="margin-top:6px">Send test SMS</button>
+    <h3 style="margin-top:16px">Email notifications</h3>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Get email alerts on start, each checkpoint departure and arrival. Powered by EmailJS (free).</div>
+    <div class="field"><label for="ejsServiceId">Service ID</label><input type="text" id="ejsServiceId" placeholder="service_xxxxxxx" style="width:160px;text-align:left"></div>
+    <div class="field"><label for="ejsTemplateId">Template ID</label><input type="text" id="ejsTemplateId" placeholder="template_xxxxxxx" style="width:160px;text-align:left"></div>
+    <div class="field"><label for="ejsPublicKey">Public Key</label><input type="text" id="ejsPublicKey" placeholder="xxxxxxxxxxxx" style="width:160px;text-align:left"></div>
+    <div style="margin-top:8px;font-size:12px;color:var(--muted)">Email addresses to notify (one per line)</div>
+    <textarea id="smsNumbers" rows="3" style="width:100%;margin-top:6px;background:var(--card);border:1px solid var(--line);border-radius:8px;color:var(--ink);font:inherit;font-size:13px;padding:8px;color-scheme:dark;resize:vertical" placeholder="supporter1@gmail.com&#10;supporter2@gmail.com"></textarea>
+    <button class="btn" id="testSmsBtn" style="margin-top:6px">Send test email</button>
     <div id="smsStatus" style="font-size:12px;color:var(--muted);margin-top:4px"></div>
     <div style="margin-top:14px;"><button class="btn danger" id="resetBtn">Reset everything (plan + race) to defaults</button></div>
   </div>
@@ -642,18 +646,22 @@
       '<circle cx="'+px+'" cy="'+py+'" r="5" fill="var(--lamp)"/></svg>';
   }
 
-  function sendSMS(message){ const url=S.workerUrl; const nums=S.smsNumbers;
-    if(!url||!nums||!nums.length) return;
+  function sendSMS(message){
+    const svcId=S.ejsServiceId; const tplId=S.ejsTemplateId; const pubKey=S.ejsPublicKey;
+    const emails=S.smsNumbers;
+    if(!svcId||!tplId||!pubKey||!emails||!emails.length) return;
     const st=document.getElementById('smsStatus');
-    if(st) st.textContent='Sending SMS...';
-    fetch(url,{ method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({numbers:nums,message}) })
-    .then(r=>r.json()).then(d=>{
-      const ok=d.results?d.results.filter(r=>r.ok).length:0;
-      const tot=d.results?d.results.length:0;
-      if(st) st.textContent='SMS sent to '+ok+'/'+tot+' numbers';
-      setTimeout(()=>{ if(st) st.textContent=''; },5000);
-    }).catch(e=>{ if(st) st.textContent='SMS error: '+e.message; });
+    if(st) st.textContent='Sending email...';
+    if(window.emailjs) window.emailjs.init({publicKey:pubKey});
+    let sent=0;
+    emails.forEach(email=>{
+      if(!email) return;
+      window.emailjs.send(svcId,tplId,{to_email:email,message:message,subject:'Trailwalker 2026 Update'})
+      .then(()=>{ sent++;
+        if(st) st.textContent='Email sent to '+sent+'/'+emails.length;
+        setTimeout(()=>{ if(st) st.textContent=''; },5000);
+      }).catch(e=>{ if(st) st.textContent='Email error: '+(e.text||e.message); });
+    });
   }
 
   function render(){
@@ -1077,7 +1085,9 @@
   document.getElementById('startInput').onchange=e=>{ if(e.target.value){S.startPlanned=new Date(e.target.value).toISOString();save();render();} };
   document.getElementById('actualStartInput').onchange=e=>{ if(e.target.value){S.startActual=new Date(e.target.value).toISOString();save();render();} };
   document.getElementById('cutoffInput').onchange=e=>{const v=parseInt(e.target.value,10); if(v>0){S.cutoffH=v;save();render();}};
-  document.getElementById('workerUrl').oninput=e=>{ S.workerUrl=e.target.value.trim(); save(); };
+  document.getElementById('ejsServiceId').oninput=e=>{ S.ejsServiceId=e.target.value.trim(); save(); };
+  document.getElementById('ejsTemplateId').oninput=e=>{ S.ejsTemplateId=e.target.value.trim(); save(); };
+  document.getElementById('ejsPublicKey').oninput=e=>{ S.ejsPublicKey=e.target.value.trim(); save(); };
   document.getElementById('smsNumbers').oninput=e=>{ S.smsNumbers=e.target.value.split('\n').map(n=>n.trim()).filter(Boolean); save(); };
   document.getElementById('testSmsBtn').onclick=()=>{ sendSMS('\ud83c\udfc3 Trailwalker 2026 test SMS — notifications are working!'); };
   document.getElementById('addLegBtn').onclick=()=>{ const n={name:'New section',route:'',km:5,d:2,sup:false,brk:7,asc:0,arrival:null,departure:null};
