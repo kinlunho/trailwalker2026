@@ -92,10 +92,13 @@
 
   .gauge{margin-top:14px;}
   .gauge .row{display:flex; justify-content:space-between; font-size:11px; color:var(--muted); letter-spacing:.04em; margin-bottom:6px; text-transform:uppercase;}
-  .bar{height:9px; border-radius:6px; background:#0d141a; overflow:hidden; position:relative; border:1px solid var(--line);}
-  .bar > i{position:absolute; left:0; top:0; bottom:0; border-radius:6px; background:linear-gradient(90deg,var(--ahead),#7fcf9f); transition:width .4s ease, background .3s;}
+  .bar{height:12px; border-radius:7px; background:#0d141a; overflow:visible; position:relative; border:1px solid var(--line); margin:4px 0 2px;}
+  .bar > i{position:absolute; left:0; top:0; bottom:0; border-radius:7px; background:linear-gradient(90deg,var(--ahead),#7fcf9f); transition:width .5s ease;}
   .bar.behind > i{background:linear-gradient(90deg,var(--lamp),var(--behind));}
-  .bar .tgt{position:absolute; top:-3px; bottom:-3px; width:2px; background:var(--ink); opacity:.8;}
+  .bar .tgt{position:absolute; top:-4px; bottom:-4px; width:2px; background:var(--ink); opacity:.7; border-radius:1px;}
+  .bar .mkr{position:absolute; top:-5px; bottom:-5px; width:3px; background:var(--rest); border-radius:2px; transition:left .4s ease;}
+  .bar .barlbl{position:absolute; top:14px; font-size:9px; color:var(--faint); white-space:nowrap; transform:translateX(-50%);}
+  .gauge .row{display:flex; justify-content:space-between; font-size:10px; color:var(--muted); margin-bottom:2px; text-transform:uppercase; letter-spacing:.04em;}
 
   .tstrip{display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line); border-radius:13px; padding:11px 13px; margin-bottom:12px; cursor:pointer;}
   .tstrip .seg{display:flex; flex-direction:column;}
@@ -254,8 +257,8 @@
     <div id="status"></div>
     <div id="startWrap"></div>
     <div class="gauge">
-      <div class="row"><span>Start</span><span>Target · cutoff</span></div>
-      <div class="bar" id="bar"><span class="tgt" id="tgtmark" style="left:0%"></span><i style="width:0%"></i></div>
+      <div class="row"><span id="barleft">Start</span><span id="barright">Section end</span></div>
+      <div class="bar" id="bar"><span class="tgt" id="tgtmark" style="left:0%"></span><span class="mkr" id="mkrmark" style="display:none;left:0%"></span><i style="width:0%"></i></div>
     </div>
   </div>
 
@@ -688,9 +691,9 @@
     } else if(c.action==='leave'){
       st.innerHTML='<span class="pill rest"><span class="dot"></span>Resting at '+S.legs[c.restingIdx].name+'</span>';
     } else if(ahead){
-      st.innerHTML='<span class="pill ok"><span class="dot"></span>Ahead of target '+durTxt(-c.vsTargetMin)+'</span>';
+      st.innerHTML='';
     } else {
-      st.innerHTML='<span class="pill bad"><span class="dot"></span>Behind target '+durTxt(c.vsTargetMin)+'</span>';
+      st.innerHTML='';
     }
     if(c.begun && !READONLY){
       const rb=document.createElement('button'); rb.className='resetrace'; rb.textContent='⟲ Reset race';
@@ -700,14 +703,50 @@
       sw.appendChild(rb);
     }
 
-    const bar=document.getElementById('bar'); bar.classList.toggle('behind',!ahead);
-    bar.querySelector('i').style.width=c.projPct+'%'; document.getElementById('tgtmark').style.left=c.tgtPct+'%';
+    const bar=document.getElementById('bar');
+    const wi2=c.action==='arrive'?c.walkingIdx:(c.action==='leave'?c.restingIdx:-1);
+    if(wi2>=0 && c.begun){
+      // section-level bar
+      const secStartKm=wi2>0?S.legs.slice(0,wi2).reduce((a,l)=>a+l.km,0):0;
+      const secKm=S.legs[wi2].km;
+      const secDepT=wi2>0&&S.legs[wi2-1].departure?new Date(S.legs[wi2-1].departure):c.base;
+      const secWalk=S.legs[wi2].walk; // planned walk minutes
+      // actual position in section
+      const actualKmInSec=markerSnap&&markerSnap.km>secStartKm?Math.min(markerSnap.km-secStartKm,secKm):null;
+      const actualPct=actualKmInSec!=null?Math.min(100,actualKmInSec/secKm*100):0;
+      // plan position: elapsed time in section / planned walk time
+      const elSecMin=(Date.now()-secDepT)/60000;
+      const planPct=Math.min(100,Math.max(0,elSecMin/secWalk*100));
+      // marker ETA position: if marker, project where we'd be at plan end based on marker speed
+      const mkrEl=document.getElementById('mkrmark');
+      if(markerSnap&&markerSnap.spd>0&&actualKmInSec!=null){
+        mkrEl.style.display='block'; mkrEl.style.left=actualPct.toFixed(1)+'%';
+      } else { mkrEl.style.display='none'; }
+      // fill = plan position; tgt = marker actual position
+      const isAhead = actualKmInSec!=null ? actualKmInSec/(secKm*planPct/100)>=1 : planPct<50;
+      bar.classList.toggle('behind', actualKmInSec!=null ? actualKmInSec<(secKm*planPct/100) : false);
+      bar.querySelector('i').style.width=planPct.toFixed(1)+'%';
+      document.getElementById('tgtmark').style.left=(actualKmInSec!=null?actualPct:planPct).toFixed(1)+'%';
+      document.getElementById('tgtmark').style.background=actualKmInSec!=null?'var(--ink)':'transparent';
+      // labels
+      const bl=document.getElementById('barleft'); const br=document.getElementById('barright');
+      if(bl) bl.textContent=S.legs[wi2].name;
+      if(br) br.textContent=secKm+'km';
+    } else {
+      // fallback: whole-race bar
+      bar.classList.toggle('behind',!ahead);
+      bar.querySelector('i').style.width=c.projPct+'%';
+      document.getElementById('tgtmark').style.left=c.tgtPct+'%';
+      document.getElementById('mkrmark').style.display='none';
+      const bl=document.getElementById('barleft'); const br=document.getElementById('barright');
+      if(bl) bl.textContent='Start'; if(br) br.textContent='Target · cutoff';
+    }
 
     document.getElementById('tstrip').innerHTML=
       '<div class="seg"><span class="k">Target</span><span class="v">'+durTxt(S.targetH*60)+'</span></div><span class="vs">vs</span>'+
       '<div class="seg"><span class="k">Projected</span><span class="v">'+durTxt((c.projFinish-c.base)/MS)+'</span></div>'+
-      '<div class="verdict '+(ahead?'ahead':'behindc')+'"><div class="big">'+(ahead?'▲ ':'▼ ')+durTxt(Math.abs(c.vsTargetMin))+'</div>'+
-      '<div class="sm">'+(ahead?'ahead of target':'behind target')+'</div></div>';
+      '<div class="verdict '+(ahead?'ahead':'behindc')+'"><div class="sm">'+(ahead?'ahead of target':'behind target')+'</div>'+
+      '<div class="big">'+(ahead?'▲ ':'▼ ')+durTxt(Math.abs(c.vsTargetMin))+'</div></div>';
     document.getElementById('tstrip').onclick= READONLY ? null : ()=>{ const p=document.getElementById('panel'); p.classList.add('open'); p.scrollIntoView({behavior:'smooth',block:'start'}); };
     const v17=document.getElementById('v17strip');
     if(c.cum17>0){ const a17=c.vs17Min<=0; v17.style.display='flex';
