@@ -1,0 +1,14 @@
+{
+  "name": "Trailwalker 2026 — Team Tracker",
+  "short_name": "TW2026",
+  "description": "Oxfam Trailwalker 2026 race-day pace tracker with live crew sync",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f1117",
+  "theme_color": "#0f1117",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
