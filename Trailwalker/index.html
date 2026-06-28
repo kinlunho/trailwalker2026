@@ -726,52 +726,66 @@
   // ── WEATHER ──────────────────────────────────────────────────
   const WX_ICON={
     50:'☀️',51:'🌤️',52:'⛅',53:'🌦️',54:'🌦️',
-    60:'☁️',61:'☁️',62:'🌧️',63:'🌧️',64:'🌧️',65:'⛈️',
+    60:'☁️',61:'☁️',62:'🌦️',63:'🌧️',64:'🌧️',65:'⛈️',
     70:'🌙',71:'🌙',72:'☁️',73:'🌧️',74:'⛈️',
     75:'🌫️',76:'🌫️',77:'🌫️'
   };
-  const WARN_ICON={
-    WTCPRE:'🌀',WTC:'🌀',WRAIN:'🌧️',WHOT:'🥵',WCOLD:'🧊',
-    WFROST:'❄️',WFIRE:'🔥',WMSGNL:'💨',WFNTSA:'🌊',WTMW:'🌊',
-    WL:'🌊',WLANDW:'⚠️',Wthunderstorm:'⛈️'
-  };
-  function wxIcon(code){ return WX_ICON[code]||'🌡️'; }
-  function warnIcon(type){
-    for(const k of Object.keys(WARN_ICON)){ if(type&&type.toUpperCase().startsWith(k)) return WARN_ICON[k]; }
-    return '⚠️';
+  // map warning CODE → emoji + optional colour
+  function warnBadge(code,type){
+    if(code==='WRAINA') return {icon:'🌧️',col:'#e67e22',text:'Amber'};
+    if(code==='WRAINR') return {icon:'🌧️',col:'#c0392b',text:'Red'};
+    if(code==='WRAINB') return {icon:'🌧️',col:'#111',  text:'Black'};
+    if(code==='WTS')    return {icon:'⛈️',col:'#6c3483',text:''};
+    if(code==='WTCPRE') return {icon:'🌀',col:'#2980b9',text:'TC'};
+    if(code==='WTC1')   return {icon:'🌀',col:'#2980b9',text:'T1'};
+    if(code==='WTC3')   return {icon:'🌀',col:'#27ae60',text:'T3'};
+    if(code==='WTC8NE'||code==='WTC8NW'||code==='WTC8SE'||code==='WTC8SW') return {icon:'🌀',col:'#c0392b',text:'T8'};
+    if(code==='WTC9')   return {icon:'🌀',col:'#922b21',text:'T9'};
+    if(code==='WTC10')  return {icon:'🌀',col:'#641e16',text:'T10'};
+    if(code==='WHOT')   return {icon:'🥵',col:'#e74c3c',text:''};
+    if(code==='WCOLD')  return {icon:'🧊',col:'#3498db',text:''};
+    if(code==='WFROST') return {icon:'❄️',col:'#3498db',text:''};
+    if(code==='WFIRE')  return {icon:'🔥',col:'#e74c3c',text:''};
+    if(code==='WMSGNL') return {icon:'💨',col:'#7f8c8d',text:''};
+    if(code==='WFNTSA'||code==='WTMW'||code==='WL') return {icon:'🌊',col:'#2980b9',text:''};
+    return {icon:'⚠️',col:'#f39c12',text:''};
   }
+  function wxIcon(code){ return WX_ICON[code]||'🌡️'; }
   async function fetchWeather(){
     const now=Date.now();
     if(now-WX.lastFetch<5*60*1000) return; // throttle 5 min
     WX.lastFetch=now;
-    // proxy URL — Cloudflare Worker to bypass CORS
-    const proxy='https://hko-weather.kinlunho.workers.dev';
-    const base=proxy+'?lang=en&dataType=';
     try{
-      const [wRes,fRes,rRes]=await Promise.all([
-        fetch(base+'warnsum'),fetch(base+'fnd'),fetch(base+'rhrread')
-      ]);
+      const proxy='https://hko-weather.kinlunho.workers.dev';
+      const base=proxy+'?lang=en&dataType=';
+      // fetch each independently so one failure doesn't kill the rest
+      const safe=url=>fetch(url).then(r=>r.json()).catch(()=>null);
+      const [w,f,r]=await Promise.all([safe(base+'warnsum'),safe(base+'fnd'),safe(base+'rhrread')]);
       // warnings
-      const w=await wRes.json();
-      WX.warnings=Object.values(w).filter(v=>v&&v.code).map(v=>({code:v.code,type:v.type||v.code}));
+      if(w) WX.warnings=Object.values(w)
+        .filter(v=>v&&v.actionCode!=='CANCEL')
+        .map(v=>({code:v.code||'',type:v.type||''}));
       // 9-day forecast
-      const f=await fRes.json();
-      WX.forecast=(f.weatherForecast||[]).map(d=>({
-        date:d.forecastDate, // YYYYMMDD
+      if(f) WX.forecast=(f.weatherForecast||[]).map(d=>({
+        date:d.forecastDate,
         icon:d.ForecastIcon||d.forecastIcon,
-        minT:d.forecastMintemp&&d.forecastMintemp.value,
-        maxT:d.forecastMaxtemp&&d.forecastMaxtemp.value,
-        minH:d.forecastMinrh&&d.forecastMinrh.value,
-        maxH:d.forecastMaxrh&&d.forecastMaxrh.value,
+        minT:d.forecastMintemp?d.forecastMintemp.value:null,
+        maxT:d.forecastMaxtemp?d.forecastMaxtemp.value:null,
+        minH:d.forecastMinrh?d.forecastMinrh.value:null,
+        maxH:d.forecastMaxrh?d.forecastMaxrh.value:null,
       }));
-      // current temp — use Sha Tin or nearest station
-      const r=await rRes.json();
-      const stations=r.temperature&&r.temperature.data||[];
-      const sha=stations.find(st=>st.place==='Sha Tin')||stations.find(st=>st.place==='Sai Kung')||stations[0];
-      if(sha){ WX.temp=sha.value; }
-      const hsta=r.humidity&&r.humidity.data||[];
-      const hsh=hsta.find(st=>st.place==='Sha Tin')||hsta[0];
-      if(hsh){ WX.humid=hsh.value; }
+      // current temp + humidity
+      if(r){
+        const tdata=r.temperature&&r.temperature.data||[];
+        const tst=tdata.find(st=>st.place==='Sha Tin')
+               ||tdata.find(st=>st.place==='Sai Kung')
+               ||tdata.find(st=>st.place==='Hong Kong Observatory')
+               ||tdata[0];
+        if(tst) WX.temp=tst.value;
+        const hdata=r.humidity&&r.humidity.data||[];
+        const hst=hdata.find(st=>st.place==='Hong Kong Observatory')||hdata[0];
+        if(hst) WX.humid=hst.value;
+      }
       render();
     } catch(e){ console.warn('Weather fetch failed',e); }
   }
@@ -953,8 +967,11 @@
     const wxtemp=document.getElementById('wxtemp');
     if(WX.warnings.length||WX.temp!==null){
       wxstrip.style.display='flex';
-      wxwarns.textContent=WX.warnings.map(w=>warnIcon(w.type)).join(' ')||'';
-      wxtemp.textContent=WX.temp!==null?(WX.temp+'°C'+(WX.humid!==null?' · '+WX.humid+'%':'')):'' ;
+      wxwarns.innerHTML=WX.warnings.map(w=>{
+        const b=warnBadge(w.code,w.type);
+        return '<span style="background:'+b.col+';border-radius:4px;padding:1px 5px;font-size:15px;color:#fff;margin-right:3px">'+b.icon+(b.text?' <span style=\'font-size:11px\'>'+b.text+'</span>':'')+'</span>';
+      }).join('')||'';
+      wxtemp.textContent=WX.temp!==null?(WX.temp+'°C'+(WX.humid!==null?' · '+WX.humid+'%':'')):'';
     } else { wxstrip.style.display='none'; }
 
     document.getElementById('tstrip').innerHTML=
