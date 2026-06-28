@@ -945,6 +945,16 @@
         btn.textContent=l.finish?'🏁 Mark finish':'✓ Arrived at '+l.name;
         btn.onclick=()=>{
           l.arrival=new Date().toISOString();
+          // auto-snap to last marker in this section if none selected
+          if(!markerSnap){
+            const secStart=S.legs.slice(0,i).reduce((a,lg)=>a+lg.km,0);
+            const secEnd=secStart+l.km;
+            const secMarkers=MARKERS.filter(mk=>mk[1]>secStart&&mk[1]<=secEnd+0.5);
+            if(secMarkers.length){
+              const lastMk=secMarkers[secMarkers.length-1];
+              markerSnap={m:lastMk[0],km:lastMk[1],lat:lastMk[2],lng:lastMk[3],t:Date.now(),spd:0};
+            }
+          }
           // capture position BEFORE clearing marker
           const arrivalSnap=markerSnap?{lat:markerSnap.lat,lng:markerSnap.lng}:null;
           // reset marker to section end km
