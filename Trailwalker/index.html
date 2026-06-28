@@ -273,8 +273,8 @@
 
   <div class="stats">
     <div class="stat"><div class="k">Walking speed</div><div class="v" id="speed">—</div></div>
-    <div class="stat"><div class="k">Walk</div><div class="v" id="moving">—</div></div>
-    <div class="stat"><div class="k">Rest</div><div class="v" id="resting">—</div></div>
+    <div class="stat"><div class="k">Moving time</div><div class="v" id="moving">—</div></div>
+    <div class="stat"><div class="k">Rest time</div><div class="v" id="resting">—</div></div>
     <div class="stat"><div class="k">Distance done</div><div class="v" id="kmdone">—</div></div>
     <div class="stat"><div class="k">Need km/h · target</div><div class="v" id="reqpace">—</div></div>
     <div class="stat"><div class="k">Section time</div><div class="v" id="buffer">—</div></div>
@@ -817,7 +817,7 @@
     document.getElementById('bigclock').textContent=hms(elapsedMs());
     document.getElementById('splitline').innerHTML = !c.begun
       ? 'starts when you tap <b>Start</b>'
-      : 'walking <b class="w">'+durTxt(c.liveMoving)+'</b> · resting <b class="r">'+durTxt(c.liveRestTotal)+'</b>';
+      : 'walk <b class="w">'+durTxt(c.liveMoving)+'</b> · rest <b class="r">'+durTxt(c.liveRestTotal)+'</b>';
 
     document.getElementById('finish').innerHTML = c.action==='done'
       ? '<span class="day">'+clock(c.projFinish)+'</span>'
