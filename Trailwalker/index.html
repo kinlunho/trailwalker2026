@@ -273,7 +273,7 @@
     <div class="stat"><div class="k">Rest time</div><div class="v" id="resting">—</div></div>
     <div class="stat"><div class="k">Distance done</div><div class="v" id="kmdone">—</div></div>
     <div class="stat"><div class="k">Need km/h · target</div><div class="v" id="reqpace">—</div></div>
-    <div class="stat"><div class="k">Proj. finish</div><div class="v" id="buffer">—</div></div>
+    <div class="stat"><div class="k">Section time</div><div class="v" id="buffer">—</div></div>
   </div>
 
   <div class="seg-h"><span class="t">Route map</span><span style="display:flex;gap:8px"><button class="btn ghost" id="mapToggle">Hide map</button><button class="btn ghost" id="gpsBtn">Show my GPS</button></span></div>
@@ -545,6 +545,16 @@
       if(l.t17>0&&pd){ mv17+=(a-pd)/MS; cum17+=l.t17; }}});
     let liveRest=null, liveRestMs=null; if(action==='leave'){ liveRestMs=now-D(S.legs[restingIdx].arrival); liveRest=liveRestMs/MS; }
     const liveMoving = movingMin + (action==='arrive' ? Math.max(0,(now-(prevDep(walkingIdx)||base))/MS) : 0);
+    // live walking time within the current section only
+    let liveSectionWalk=null;
+    if(action==='arrive'&&walkingIdx>=0){
+      const secStart=prevDep(walkingIdx)||base;
+      liveSectionWalk=Math.max(0,(now-secStart)/MS); // minutes
+    } else if(action==='leave'&&restingIdx>=0){
+      // section is done — show actual walk time for that section
+      const secStart=prevDep(restingIdx)||base;
+      liveSectionWalk=(D(S.legs[restingIdx].arrival)-secStart)/MS;
+    }
     const liveRestTotal = breakMin + (action==='leave' ? Math.max(0,(now-D(S.legs[restingIdx].arrival))/MS) : 0);
     const elapsed = begun ? (now-base)/MS : 0;
 
@@ -581,7 +591,7 @@
 
     return {base,begun,cutoff,targetFinish,now,plArr,tgtArr,plFinish,totalPlanMin,totalBreak,projFinish,TOTAL,
       ratio,movingMin,breakMin,kmDone,remKm,walkSpeed,vsTargetMin,bufferCutMin,reqPaceTarget,paceForTarget,
-      projPct,tgtPct,action,actionIdx,walkingIdx,restingIdx,arrivedIdx,liveRest,liveRestMs,prevDep,liveMoving,liveRestTotal,elapsed,
+      projPct,tgtPct,action,actionIdx,walkingIdx,restingIdx,arrivedIdx,liveRest,liveRestMs,prevDep,liveMoving,liveRestTotal,elapsed,liveSectionWalk,
       nextIdx,nextETA,nextMins,posKm,mv17,cum17,vs17Min:(mv17-cum17)};
   }
 
@@ -888,8 +898,15 @@
     const rp=document.getElementById('reqpace');
     rp.innerHTML= c.remKm<=0?'<small>done</small>':(c.reqPaceTarget<=0?'<span style="color:var(--behind)">over</span>':'≥'+kmhTxt(c.reqPaceTarget)+'<small> km/h</small>');
     const bufEl=document.getElementById('buffer');
-    if(c.projFinish){ const pf=clock(c.projFinish); bufEl.innerHTML='<span style="font-size:13px">'+pf+'</span>'; }
-    else { bufEl.innerHTML='—'; }
+    if(c.liveSectionWalk!=null){
+      const idx=c.action==='arrive'?c.walkingIdx:c.restingIdx;
+      const planWalk=idx>=0?S.legs[idx].walk:0;
+      const diff=c.liveSectionWalk-planWalk;
+      const col=diff<=0?'var(--ahead)':'var(--behind)';
+      const sign=diff<=0?'▲':'▼';
+      const diffTxt=diff!==0?' <small style="color:'+col+'">'+sign+durTxt(Math.abs(diff))+'</small>':'';
+      bufEl.innerHTML='<span style="font-size:14px">'+durTxt(c.liveSectionWalk)+'</span>'+diffTxt;
+    } else { bufEl.innerHTML='—'; }
 
     const trail=document.getElementById('trail'); trail.innerHTML='';
     const editing = window.__oxEdit || (window.__oxEdit=new Set());
