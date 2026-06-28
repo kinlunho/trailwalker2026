@@ -745,7 +745,12 @@
       if(msel._secKey!==wi){
         msel._secKey=wi;
         const secMarkers=MARKERS.filter(mk=>mk[1]>secStart&&mk[1]<=secEnd+0.5);
-        msel.innerHTML='<option value="">—</option>'+secMarkers.map(mk=>'<option value="'+mk[0]+'">M'+String(mk[0]).padStart(3,'0')+'</option>').join('');
+        // if current markerSnap is outside this section (carry-over from previous), include it
+        let extraOpt='';
+        if(markerSnap&&!secMarkers.find(mk=>mk[0]===markerSnap.m)){
+          extraOpt='<option value="'+markerSnap.m+'">M'+String(markerSnap.m).padStart(3,'0')+' ←</option>';
+        }
+        msel.innerHTML='<option value="">—</option>'+extraOpt+secMarkers.map(mk=>'<option value="'+mk[0]+'">M'+String(mk[0]).padStart(3,'0')+'</option>').join('');
         msel.onchange=()=>{
           const v=parseInt(msel.value); if(!v||v<1||v>200) return;
           const mk=MARKERS[v-1]; if(!mk) return;
@@ -761,7 +766,8 @@
           render();
         };
       }
-      if(markerSnap) msel.value=markerSnap.m;
+      // always sync dropdown to current markerSnap every render
+      if(markerSnap) msel.value=markerSnap.m; else msel.value='';
     } else { mblock.style.display='none'; }
 
     // colour walking speed stat
