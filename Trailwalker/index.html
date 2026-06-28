@@ -955,13 +955,12 @@
               markerSnap={m:lastMk[0],km:lastMk[1],lat:lastMk[2],lng:lastMk[3],t:Date.now(),spd:0};
             }
           }
-          // capture position BEFORE clearing marker
+          // capture position for email (markerSnap already set — do NOT clear it)
           const arrivalSnap=markerSnap?{lat:markerSnap.lat,lng:markerSnap.lng}:null;
-          // reset marker to section end km
-          const secEndKm=S.legs.slice(0,i+1).reduce((a,lg)=>a+lg.km,0);
-          markerSnap=null; S.markerSnap=null;
-          if(window.__msel){ window.__msel._secKey=null; } // force dropdown rebuild
-          if(SYNCED&&db){ try{ db.ref(dbpath()+'/markerSnap').remove(); }catch(e){} }
+          // persist markerSnap so position is never empty after first arrival
+          S.markerSnap=markerSnap;
+          if(window.__msel){ window.__msel._secKey=null; } // force dropdown rebuild for next section
+          if(SYNCED&&db&&markerSnap){ try{ db.ref(dbpath()+'/markerSnap').set({m:markerSnap.m,km:markerSnap.km,lat:markerSnap.lat,lng:markerSnap.lng,t:markerSnap.t,spd:markerSnap.spd}); }catch(e){} }
           // build rich SMS
           let msg;
           try {
@@ -1000,6 +999,18 @@
         const btn=document.createElement('button'); btn.className='stamp leave'; btn.textContent='→ Leave '+l.name;
         btn.onclick=()=>{
           l.departure=new Date().toISOString();
+          // auto-snap to last marker of this section if somehow empty
+          if(!markerSnap){
+            const secStart=S.legs.slice(0,i).reduce((a,lg)=>a+lg.km,0);
+            const secEnd=secStart+l.km;
+            const secMarkers=MARKERS.filter(mk=>mk[1]>secStart&&mk[1]<=secEnd+0.5);
+            if(secMarkers.length){
+              const lastMk=secMarkers[secMarkers.length-1];
+              markerSnap={m:lastMk[0],km:lastMk[1],lat:lastMk[2],lng:lastMk[3],t:Date.now(),spd:0};
+              S.markerSnap=markerSnap;
+              if(SYNCED&&db){ try{ db.ref(dbpath()+'/markerSnap').set({m:markerSnap.m,km:markerSnap.km,lat:markerSnap.lat,lng:markerSnap.lng,t:markerSnap.t,spd:markerSnap.spd}); }catch(e){} }
+            }
+          }
           // build leave SMS
           try {
             const cc=compute();
