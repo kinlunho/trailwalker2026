@@ -731,24 +731,32 @@
     75:'🌫️',76:'🌫️',77:'🌫️'
   };
   // map warning CODE → emoji + optional colour
-  function warnBadge(code,type){
-    if(code==='WRAINA') return {icon:'🌧️',col:'#e67e22',text:'Amber'};
-    if(code==='WRAINR') return {icon:'🌧️',col:'#c0392b',text:'Red'};
-    if(code==='WRAINB') return {icon:'🌧️',col:'#111',  text:'Black'};
-    if(code==='WTS')    return {icon:'⛈️',col:'#6c3483',text:''};
-    if(code==='WTCPRE') return {icon:'🌀',col:'#2980b9',text:'TC'};
-    if(code==='WTC1')   return {icon:'🌀',col:'#2980b9',text:'T1'};
-    if(code==='WTC3')   return {icon:'🌀',col:'#27ae60',text:'T3'};
-    if(code==='WTC8NE'||code==='WTC8NW'||code==='WTC8SE'||code==='WTC8SW') return {icon:'🌀',col:'#c0392b',text:'T8'};
-    if(code==='WTC9')   return {icon:'🌀',col:'#922b21',text:'T9'};
-    if(code==='WTC10')  return {icon:'🌀',col:'#641e16',text:'T10'};
-    if(code==='WHOT')   return {icon:'🥵',col:'#e74c3c',text:''};
-    if(code==='WCOLD')  return {icon:'🧊',col:'#3498db',text:''};
-    if(code==='WFROST') return {icon:'❄️',col:'#3498db',text:''};
-    if(code==='WFIRE')  return {icon:'🔥',col:'#e74c3c',text:''};
-    if(code==='WMSGNL') return {icon:'💨',col:'#7f8c8d',text:''};
-    if(code==='WFNTSA'||code==='WTMW'||code==='WL') return {icon:'🌊',col:'#2980b9',text:''};
-    return {icon:'⚠️',col:'#f39c12',text:''};
+  const HKO_ICON_BASE='https://www.hko.gov.hk/textonly/v2/warning/';
+  // priority order for display (lower = shown first)
+  const WARN_ORDER={WTC10:0,WTC9:1,WTC8NE:2,WTC8NW:2,WTC8SE:2,WTC8SW:2,WTC3:3,WTC1:4,WTCPRE:5,
+    WTS:6,WRAINB:7,WRAINR:8,WRAINA:9,WHOT:10,WCOLD:11,WFROST:12,WFIRE:13,WMSGNL:14,WFNTSA:15,WTMW:15,WL:15};
+  function warnBadge(code){
+    const img=c=>HKO_ICON_BASE+c.toLowerCase()+'.png';
+    if(code==='WTS')    return {img:img('wts'),   label:'Thunderstorm'};
+    if(code==='WRAINA') return {img:img('wraina'), label:'Amber Rain'};
+    if(code==='WRAINR') return {img:img('wrainr'), label:'Red Rain'};
+    if(code==='WRAINB') return {img:img('wrainb'), label:'Black Rain'};
+    if(code==='WHOT')   return {img:img('whot'),   label:'Hot'};
+    if(code==='WCOLD')  return {img:img('wcold'),  label:'Cold'};
+    if(code==='WFROST') return {img:img('wfrost'), label:'Frost'};
+    if(code==='WFIRE')  return {img:img('wfire'),  label:'Fire Danger'};
+    if(code==='WMSGNL') return {img:img('wmsgnl'), label:'Strong Wind'};
+    if(code==='WTCPRE') return {img:img('wtcpre'), label:'TC Pre-8'};
+    if(code==='WTC1')   return {img:img('w1'),     label:'T1'};
+    if(code==='WTC3')   return {img:img('w3'),     label:'T3'};
+    if(code==='WTC8NE') return {img:img('w8ne'),   label:'T8 NE'};
+    if(code==='WTC8NW') return {img:img('w8nw'),   label:'T8 NW'};
+    if(code==='WTC8SE') return {img:img('w8se'),   label:'T8 SE'};
+    if(code==='WTC8SW') return {img:img('w8sw'),   label:'T8 SW'};
+    if(code==='WTC9')   return {img:img('w9'),     label:'T9'};
+    if(code==='WTC10')  return {img:img('w10'),    label:'T10'};
+    if(code==='WFNTSA'||code==='WTMW'||code==='WL') return {img:img(code.toLowerCase()),label:'Tsunami'};
+    return {img:'',label:code};
   }
   function wxIcon(code){ return WX_ICON[code]||'🌡️'; }
   async function fetchWeather(){
@@ -967,11 +975,14 @@
     const wxtemp=document.getElementById('wxtemp');
     if(WX.warnings.length||WX.temp!==null){
       wxstrip.style.display='flex';
-      wxwarns.innerHTML=WX.warnings.map(w=>{
-        const b=warnBadge(w.code,w.type);
-        return '<span style="background:'+b.col+';border-radius:4px;padding:1px 5px;font-size:15px;color:#fff;margin-right:3px">'+b.icon+(b.text?' <span style=\'font-size:11px\'>'+b.text+'</span>':'')+'</span>';
+      const sorted=[...WX.warnings].sort((a,b)=>(WARN_ORDER[a.code]??99)-(WARN_ORDER[b.code]??99));
+      wxwarns.innerHTML=sorted.map(w=>{
+        const b=warnBadge(w.code);
+        return b.img
+          ? '<img src="'+b.img+'" title="'+b.label+'" style="height:28px;width:auto;margin-right:4px;vertical-align:middle">'
+          : '<span style="font-size:13px;margin-right:4px">'+b.label+'</span>';
       }).join('')||'';
-      wxtemp.textContent=WX.temp!==null?(WX.temp+'°C'+(WX.humid!==null?' · '+WX.humid+'%':'')):'';
+      wxtemp.textContent=WX.temp!==null?(WX.temp+'°C'+(WX.humid!==null?' · '+WX.humid+'% RH':'')):'';
     } else { wxstrip.style.display='none'; }
 
     document.getElementById('tstrip').innerHTML=
