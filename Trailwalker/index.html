@@ -118,7 +118,16 @@
   .v17strip .t17v{color:var(--muted);}
 
   .stats{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:0 0 14px;}
-  .stat{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 11px;}
+  .stat{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 11px; position:relative; cursor:help;}
+  .stat .k{display:flex;align-items:center;gap:4px;}
+  .stat .k::after{content:'?';display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;background:var(--line);color:var(--muted);font-size:9px;font-weight:700;flex-shrink:0;opacity:0.7;}
+  /* tooltip popup */
+  .tip-overlay{display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.5);}
+  .tip-overlay.show{display:flex;align-items:center;justify-content:center;padding:20px;}
+  .tip-box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;max-width:320px;width:100%;}
+  .tip-box h4{margin:0 0 8px;font-size:15px;color:var(--ink);}
+  .tip-box p{margin:0;font-size:13px;color:var(--muted);line-height:1.6;}
+  .tip-box .tip-close{margin-top:14px;display:block;text-align:center;font-size:13px;color:var(--lamp);cursor:pointer;padding:6px;}
   .stat .k{font-size:10px; letter-spacing:.07em; text-transform:uppercase; color:var(--faint);}
   .stat .v{font-size:16px; font-weight:700; margin-top:3px;}
   .stat .v small{font-size:11px; color:var(--muted); font-weight:600;}
@@ -272,12 +281,20 @@
   <div class="v17strip" id="v17strip" style="display:none"></div>
 
   <div class="stats">
-    <div class="stat"><div class="k">Walking speed</div><div class="v" id="speed">—</div></div>
-    <div class="stat"><div class="k">Moving time</div><div class="v" id="moving">—</div></div>
-    <div class="stat"><div class="k">Rest time</div><div class="v" id="resting">—</div></div>
-    <div class="stat"><div class="k">Distance done</div><div class="v" id="kmdone">—</div></div>
-    <div class="stat"><div class="k">Need km/h · target</div><div class="v" id="reqpace">—</div></div>
-    <div class="stat"><div class="k">Section time</div><div class="v" id="buffer">—</div></div>
+    <div class="stat" data-tip="walking-speed"><div class="k">Walking speed</div><div class="v" id="speed">—</div></div>
+    <div class="stat" data-tip="moving-time"><div class="k">Moving time</div><div class="v" id="moving">—</div></div>
+    <div class="stat" data-tip="rest-time"><div class="k">Rest time</div><div class="v" id="resting">—</div></div>
+    <div class="stat" data-tip="distance-done"><div class="k">Distance done</div><div class="v" id="kmdone">—</div></div>
+    <div class="stat" data-tip="need-pace"><div class="k">Need km/h · target</div><div class="v" id="reqpace">—</div></div>
+    <div class="stat" data-tip="section-time"><div class="k">Section time</div><div class="v" id="buffer">—</div></div>
+  </div>
+
+  <div class="tip-overlay" id="tipOverlay" onclick="this.classList.remove('show')">
+    <div class="tip-box" onclick="event.stopPropagation()">
+      <h4 id="tipTitle"></h4>
+      <p id="tipBody"></p>
+      <span class="tip-close" onclick="document.getElementById('tipOverlay').classList.remove('show')">Tap to close</span>
+    </div>
   </div>
 
   <div class="seg-h"><span class="t">Route map</span><span style="display:flex;gap:8px"><button class="btn ghost" id="mapToggle">Hide map</button><button class="btn ghost" id="gpsBtn">Show my GPS</button></span></div>
@@ -1452,6 +1469,27 @@
       if(c){ S.ejsServiceId=c.svc||''; S.ejsTemplateId=c.tpl||''; S.ejsPublicKey=c.key||''; if(c.nums)S.smsNumbers=c.nums;
         try{ localStorage.setItem('tw2026:emailjs',JSON.stringify({svc:c.svc,tpl:c.tpl,key:c.key,nums:c.nums})); }catch(e){}
         render(); } }); }catch(e){} } }
+  // ── TOOLTIPS ─────────────────────────────────────────────────
+  const TIPS={
+    "walking-speed":{t:"Walking speed",b:"Current pace in km/h. Green = at or above this section plan speed. Amber = slightly under. Red = significantly under plan. Live means calculated from your last marker position and time."},
+    "moving-time":  {t:"Moving time",  b:"Total time spent walking since race start, excluding all rest stops. Used to calculate your overall walking speed."},
+    "rest-time":    {t:"Rest time",    b:"Total time resting at checkpoints since race start. Each section has a planned rest budget shown in the section card below."},
+    "distance-done":{t:"Distance done",b:"Kilometres completed based on last checkpoint arrived. The second number shows km remaining to the finish line (102km total)."},
+    "need-pace":    {t:"Need km/h",    b:"TARGET: minimum average speed needed right now to finish within your 32h goal, factoring in all remaining rest stops. Switches to PROJ once past target time, showing pace needed to hold your current projected finish."},
+    "section-time": {t:"Section time", b:"Time spent walking in the current section. Green triangle = ahead of section plan. Red triangle = behind plan. Compare with the planned walk time shown in the section card below."},
+  };
+  document.querySelectorAll('.stat[data-tip]').forEach(el=>{
+    el.addEventListener('click',()=>{
+      const tip=TIPS[el.dataset.tip]; if(!tip) return;
+      document.getElementById('tipTitle').textContent=tip.t;
+      document.getElementById('tipBody').textContent=tip.b;
+      document.getElementById('tipOverlay').classList.add('show');
+    });
+    // desktop hover tooltip
+    el.title=TIPS[el.dataset.tip]?TIPS[el.dataset.tip].b:'';
+  });
+  // ─────────────────────────────────────────────────────────────
+
   document.getElementById('teamNum').oninput=e=>{ S.teamNum=e.target.value.trim()||'0565'; save(); };
   document.getElementById('donateUrl').oninput=e=>{ S.donateUrl=e.target.value.trim(); save(); };
   document.getElementById('ejsServiceId').oninput=e=>{ S.ejsServiceId=e.target.value.trim(); save(); saveEjsConfig(); };
