@@ -706,7 +706,7 @@
       _done=L.polyline([],{color:'#5fb98f',weight:5,opacity:.95}).addTo(_map);
       L.circleMarker(RT.route[0],{radius:6,color:'#fff',weight:2,fillColor:'#6aa3c4',fillOpacity:1}).addTo(_map).bindTooltip('Start');
       L.circleMarker(RT.route[RT.route.length-1],{radius:6,color:'#fff',weight:2,fillColor:'#f4b24a',fillOpacity:1}).addTo(_map).bindTooltip('Finish');
-      (RT.cp||[]).forEach(c=>{ const p=routePoint(c[1]); if(p) L.circleMarker(p,{radius:4,color:'#10161c',weight:1,fillColor:'#8ba0ac',fillOpacity:1}).addTo(_map).bindTooltip('CP '+c[0]); });
+      (RT.cp||[]).forEach(c=>{ const p=routePoint(c[1]); if(p) L.circleMarker(p,{radius:5,color:'#10161c',weight:1.5,fillColor:'#f4b24a',fillOpacity:1}).addTo(_map).bindTooltip(c[0]); });
       _pos=L.circleMarker(RT.route[0],{radius:8,color:'#1a1206',weight:2,fillColor:'#f4b24a',fillOpacity:1}).addTo(_map).bindTooltip('You');
       _map.fitBounds(L.polyline(RT.route).getBounds(),{padding:[18,18]});
       setTimeout(()=>{try{_map.invalidateSize();}catch(e){}},200);
@@ -847,7 +847,9 @@
     return mkrs;
   }
   function buildLegsFromGPX(gd,cpFracs){
-    const legs=[]; let prevF=0;
+    const legs=[]; let prevF=0; let cumKm=0;
+    // build cp array for map display — section end points
+    const cpForMap=[];
     cpFracs.forEach((cpF,ci)=>{
       const s0=prevF*gd.totalKm,s1=cpF*gd.totalKm,secKm=Math.round((s1-s0)*10)/10;
       let secAsc=0,secDesc=0;
@@ -857,16 +859,37 @@
         const dh=gd.ele[i]-gd.ele[i-1]; if(dh>0)secAsc+=dh; else secDesc+=Math.abs(dh);
       }
       secAsc=Math.round(secAsc); secDesc=Math.round(secDesc);
+      cumKm=Math.round((cumKm+secKm)*10)/10;
+      const secName='S'+(ci+1)+' ('+cumKm+'km)';
+      if(ci<cpFracs.length-1) cpForMap.push([secName,cpF]);
       legs.push({name:'Section '+(ci+1),km:secKm,d:2,walk:nabSmithMin(secKm,secAsc,secDesc),
         brk:ci<cpFracs.length-1?10:0,asc:secAsc,desc:secDesc,t17:0,cutM:0,
         arrival:null,departure:null,finish:ci===cpFracs.length-1,sup:false,route:''});
       prevF=cpF;
     });
+    // update RT.cp so map shows checkpoint markers
+    RT.cp=cpForMap;
+    if(window.OTW_ROUTE) window.OTW_ROUTE.cp=cpForMap;
+    // redraw checkpoint markers on live map
+    if(_map){ drawCpMarkers(); }
     return legs;
   }
+
+  function drawCpMarkers(){
+    // remove old cp markers
+    if(window._cpMapMarkers) window._cpMapMarkers.forEach(m=>{try{_map.removeLayer(m);}catch(e){}});
+    window._cpMapMarkers=[];
+    (RT.cp||[]).forEach(c=>{
+      const p=routePoint(c[1]); if(!p) return;
+      const mk=L.circleMarker(p,{radius:5,color:'#10161c',weight:1.5,fillColor:'#f4b24a',fillOpacity:1})
+        .addTo(_map).bindTooltip(c[0]);
+      window._cpMapMarkers.push(mk);
+    });
+  }
   function applyGPXRoute(gd){
+    const existingCp=(RT.cp&&RT.cp.length)?RT.cp:[];
     window.OTW_ROUTE={route:gd.route,frac:gd.frac,ele:gd.ele,ele_min:gd.ele_min,ele_max:gd.ele_max,
-      total_km:gd.total_km,total_asc:gd.total_asc,cp:[],sec_asc:[]};
+      total_km:gd.total_km,total_asc:gd.total_asc,cp:existingCp,sec_asc:[]};
     Object.assign(RT,window.OTW_ROUTE);
     const newMkrs=generateMarkersFromGPX(gd);
     MARKERS.length=0; newMkrs.forEach(m=>MARKERS.push(m));
