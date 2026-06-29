@@ -312,6 +312,7 @@
     <button class="btn" id="addLegBtn" style="margin-top:4px">+ Add section</button>
     <h3 style="margin-top:16px">Email notifications</h3>
     <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Get email alerts on start, each checkpoint departure and arrival. Powered by EmailJS (free).</div>
+    <div class="field"><label for="teamNum">Team number</label><input type="text" id="teamNum" placeholder="0565" style="width:80px;text-align:left"></div>
     <div class="field"><label for="ejsServiceId">Service ID</label><input type="text" id="ejsServiceId" placeholder="service_xxxxxxx" style="width:160px;text-align:left"></div>
     <div class="field"><label for="ejsTemplateId">Template ID</label><input type="text" id="ejsTemplateId" placeholder="template_xxxxxxx" style="width:160px;text-align:left"></div>
     <div class="field"><label for="ejsPublicKey">Public Key</label><input type="text" id="ejsPublicKey" placeholder="xxxxxxxxxxxx" style="width:160px;text-align:left"></div>
@@ -748,7 +749,7 @@
     let sent=0, failed=0;
     emails.forEach(email=>{
       if(!email) return;
-      window.emailjs.send(svcId,tplId,{to_email:email,message:message,subject:'Trailwalker 0565 Update'})
+      window.emailjs.send(svcId,tplId,{to_email:email,message:message,subject:'Trailwalker '+(S.teamNum||'0565')+' Update'})
       .then(r=>{ sent++;
         if(st) st.textContent='✓ Sent '+sent+'/'+(sent+failed)+' (status '+r.status+')';
         setTimeout(()=>{ if(st) st.textContent=''; },8000);
@@ -940,7 +941,7 @@
             const firstLeg=S.legs[0];
             const startTime=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
             const cc=compute();
-            let msg='\ud83c\udfc1 Team 0565 \u2014 We started at '+startTime+'!';
+            let msg='\ud83c\udfc1 Team '+(S.teamNum||'0565')+' \u2014 We started at '+startTime+'!';
             if(firstLeg){
               msg+=' | First: '+firstLeg.name+' ('+firstLeg.km+'km)';
               msg+=' | \u2193'+firstLeg.desc+'m \u2191'+firstLeg.asc+'m';
@@ -950,7 +951,7 @@
             msg+=wxLine();
             msg+=mapLink();
             sendSMS(msg);
-          } catch(e){ sendSMS('\ud83c\udfc1 Team 0565 \u2014 We have started! Good luck team!'); }
+          } catch(e){ sendSMS('\ud83c\udfc1 Team '+(S.teamNum||'0565')+' \u2014 We have started! Good luck team!'); }
           save(); render();
         }; sw.appendChild(b); }
     } else if(c.action==='done'){
@@ -1185,7 +1186,7 @@
             const aheadTxt=cc.vsTargetMin<=0?' | \u25b2 '+durTxt(-cc.vsTargetMin)+' ahead':' | \u25bc '+durTxt(cc.vsTargetMin)+' behind';
             const routeMap='https://www.google.com/maps/d/viewer?mid=17KKPiqSM3PdpfHOTeC347SdbvtmKTa4';
             const posLink=arrivalSnap?'<br><br>📍 Position: https://maps.google.com/?q='+arrivalSnap.lat.toFixed(5)+','+arrivalSnap.lng.toFixed(5)+'<br>🗺 OTW Route: '+routeMap:'<br><br>🗺 OTW Route: '+routeMap;
-            msg='\ud83c\udfc3 Team 0565 \u2014 Arrived '+l.name+' at '+arrTime
+            msg='\ud83c\udfc3 Team '+(S.teamNum||'0565')+' \u2014 Arrived '+l.name+' at '+arrTime
               +' | '+kmDone+'km done'
               +(spd?' | avg '+spd+' km/h':'')
               +etaTxt
@@ -1194,7 +1195,7 @@
               +overallLine(cc)
               +wxLine()
               +posLink;
-          } catch(e){ msg='\ud83c\udfc3 Team 0565 \u2014 Arrived '+l.name+' at '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
+          } catch(e){ msg='\ud83c\udfc3 Team '+(S.teamNum||'0565')+' \u2014 Arrived '+l.name+' at '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
           sendSMS(msg);
           save(); render();
         };
@@ -1228,7 +1229,7 @@
             const cc=compute();
             const leaveTime=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
             const nextLeg=S.legs[i+1];
-            let msg='\ud83d\udeb6 Team 0565 \u2014 Left '+l.name+' at '+leaveTime;
+            let msg='\ud83d\udeb6 Team '+(S.teamNum||'0565')+' \u2014 Left '+l.name+' at '+leaveTime;
             if(nextLeg){
               msg+=' | Next: '+nextLeg.name+' ('+nextLeg.km+'km)';
               msg+=' | \u2193'+nextLeg.desc+'m \u2191'+nextLeg.asc+'m';
@@ -1238,7 +1239,7 @@
             msg+=wxLine();
             msg+=mapLink();
             sendSMS(msg);
-          } catch(e){ sendSMS('\ud83d\udeb6 Team 0565 \u2014 Left '+l.name+' at '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})); }
+          } catch(e){ sendSMS('\ud83d\udeb6 Team '+(S.teamNum||'0565')+' \u2014 Left '+l.name+' at '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})); }
           save(); render();
         };
         row.appendChild(btn); el.appendChild(row);
@@ -1296,6 +1297,7 @@
     try{ const c=JSON.parse(localStorage.getItem('tw2026:emailjs')||'null');
       if(c&&c.svc){ if(!S.ejsServiceId)S.ejsServiceId=c.svc; if(!S.ejsTemplateId)S.ejsTemplateId=c.tpl||''; if(!S.ejsPublicKey)S.ejsPublicKey=c.key||''; if(c.nums&&!S.smsNumbers.length)S.smsNumbers=c.nums; }
     }catch(e){}
+    const eTNum=document.getElementById('teamNum'); if(eTNum&&!eTNum.matches(':focus'))eTNum.value=S.teamNum||'0565';
     const eSvc=document.getElementById('ejsServiceId'); if(eSvc&&!eSvc.matches(':focus'))eSvc.value=S.ejsServiceId||'';
     const eTpl=document.getElementById('ejsTemplateId'); if(eTpl&&!eTpl.matches(':focus'))eTpl.value=S.ejsTemplateId||'';
     const eKey=document.getElementById('ejsPublicKey'); if(eKey&&!eKey.matches(':focus'))eKey.value=S.ejsPublicKey||'';
@@ -1424,6 +1426,7 @@
       if(c){ S.ejsServiceId=c.svc||''; S.ejsTemplateId=c.tpl||''; S.ejsPublicKey=c.key||''; if(c.nums)S.smsNumbers=c.nums;
         try{ localStorage.setItem('tw2026:emailjs',JSON.stringify({svc:c.svc,tpl:c.tpl,key:c.key,nums:c.nums})); }catch(e){}
         render(); } }); }catch(e){} } }
+  document.getElementById('teamNum').oninput=e=>{ S.teamNum=e.target.value.trim()||'0565'; save(); };
   document.getElementById('ejsServiceId').oninput=e=>{ S.ejsServiceId=e.target.value.trim(); save(); saveEjsConfig(); };
   document.getElementById('ejsTemplateId').oninput=e=>{ S.ejsTemplateId=e.target.value.trim(); save(); saveEjsConfig(); };
   document.getElementById('ejsPublicKey').oninput=e=>{ S.ejsPublicKey=e.target.value.trim(); save(); saveEjsConfig(); };
