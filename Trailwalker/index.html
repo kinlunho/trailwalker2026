@@ -234,7 +234,7 @@
 </svg>
 
 <div class="wrap">
-  <div class="masthead"><h1>Oxfam <b>Trailwalker</b> 100</h1><div class="sub">20–22 Nov 2026</div></div>
+  <div class="masthead"><h1>Oxfam <b>Trailwalker</b> 100</h1><div class="sub">20–22 Nov 2026</div><div id="donatelink" style="display:none;margin-top:4px"><a id="donatehref" href="#" target="_blank" style="color:#f4a300;font-size:12px;font-weight:600;text-decoration:none;border:1px solid #f4a300;border-radius:12px;padding:2px 10px">Donate</a></div></div>
   <div class="syncbar" id="syncbar"></div>
 
   <div class="hero">
@@ -313,6 +313,7 @@
     <h3 style="margin-top:16px">Email notifications</h3>
     <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Get email alerts on start, each checkpoint departure and arrival. Powered by EmailJS (free).</div>
     <div class="field"><label for="teamNum">Team number</label><input type="text" id="teamNum" placeholder="0565" style="width:80px;text-align:left"></div>
+    <div class="field"><label for="donateUrl">Donation URL</label><input type="url" id="donateUrl" placeholder="https://event.oxfamtrailwalker.org.hk/..." style="width:100%;text-align:left"></div>
     <div class="field"><label for="ejsServiceId">Service ID</label><input type="text" id="ejsServiceId" placeholder="service_xxxxxxx" style="width:160px;text-align:left"></div>
     <div class="field"><label for="ejsTemplateId">Template ID</label><input type="text" id="ejsTemplateId" placeholder="template_xxxxxxx" style="width:160px;text-align:left"></div>
     <div class="field"><label for="ejsPublicKey">Public Key</label><input type="text" id="ejsPublicKey" placeholder="xxxxxxxxxxxx" style="width:160px;text-align:left"></div>
@@ -492,6 +493,7 @@
     markFinish(S.legs);
     if(!S.startPlanned)S.startPlanned=defaultStart();
     if(!S.cutoffH)S.cutoffH=48; if(!S.targetH)S.targetH=DEF_TARGET; if(!S.paceMin)S.paceMin=DEF_PACE;
+    if(!S.teamNum)S.teamNum='0565'; if(S.donateUrl===undefined)S.donateUrl='https://event.oxfamtrailwalker.org.hk/en/Donation/Sponsorship?tId=r1tQWNW__bA%3D';
   }
   async function saveOld(){}
 
@@ -725,6 +727,11 @@
     const warns=WX.warnings.map(w=>warnBadge(w.code).icon+(warnBadge(w.code).text?' '+warnBadge(w.code).text:'')).join(' ');
     const temp=WX.temp!==null?(WX.temp+'°C'+(WX.humid!==null?' '+WX.humid+'% RH':'')):'';
     return '<br><br>⛅ Weather: '+(warns?warns+' · ':'')+temp;
+  }
+
+  function donateLink(){
+    if(!S.donateUrl) return '';
+    return '<br><br>❤️ Support Team '+(S.teamNum||'0565')+': <a href="'+S.donateUrl+'">Donate to Oxfam Trailwalker</a>';
   }
 
   function mapLink(){
@@ -1310,6 +1317,9 @@
       if(c&&c.svc){ if(!S.ejsServiceId)S.ejsServiceId=c.svc; if(!S.ejsTemplateId)S.ejsTemplateId=c.tpl||''; if(!S.ejsPublicKey)S.ejsPublicKey=c.key||''; if(c.nums&&!S.smsNumbers.length)S.smsNumbers=c.nums; }
     }catch(e){}
     const eTNum=document.getElementById('teamNum'); if(eTNum&&!eTNum.matches(':focus'))eTNum.value=S.teamNum||'0565';
+    const eDon=document.getElementById('donateUrl'); if(eDon&&!eDon.matches(':focus'))eDon.value=S.donateUrl||'';
+    const dlDiv=document.getElementById('donatelink'),dlA=document.getElementById('donatehref');
+    if(dlDiv&&dlA){ if(S.donateUrl){dlDiv.style.display='block';dlA.href=S.donateUrl;}else{dlDiv.style.display='none';} }
     const eSvc=document.getElementById('ejsServiceId'); if(eSvc&&!eSvc.matches(':focus'))eSvc.value=S.ejsServiceId||'';
     const eTpl=document.getElementById('ejsTemplateId'); if(eTpl&&!eTpl.matches(':focus'))eTpl.value=S.ejsTemplateId||'';
     const eKey=document.getElementById('ejsPublicKey'); if(eKey&&!eKey.matches(':focus'))eKey.value=S.ejsPublicKey||'';
@@ -1439,6 +1449,7 @@
         try{ localStorage.setItem('tw2026:emailjs',JSON.stringify({svc:c.svc,tpl:c.tpl,key:c.key,nums:c.nums})); }catch(e){}
         render(); } }); }catch(e){} } }
   document.getElementById('teamNum').oninput=e=>{ S.teamNum=e.target.value.trim()||'0565'; save(); };
+  document.getElementById('donateUrl').oninput=e=>{ S.donateUrl=e.target.value.trim(); save(); };
   document.getElementById('ejsServiceId').oninput=e=>{ S.ejsServiceId=e.target.value.trim(); save(); saveEjsConfig(); };
   document.getElementById('ejsTemplateId').oninput=e=>{ S.ejsTemplateId=e.target.value.trim(); save(); saveEjsConfig(); };
   document.getElementById('ejsPublicKey').oninput=e=>{ S.ejsPublicKey=e.target.value.trim(); save(); saveEjsConfig(); };
