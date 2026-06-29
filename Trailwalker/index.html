@@ -892,8 +892,9 @@
     const speedEl=document.getElementById('speed');
     const liveSpd=markerSnap&&c.begun?markerSnap.spd:null;
     const dispSpd=liveSpd||c.walkSpeed;
-    // compare against plan pace (target speed per section)
-    const planKmh=S.paceMin>0?60/S.paceMin:3.8;
+    // compare against current active section's plan speed
+    const activeLeg=c.walkingIdx>=0?S.legs[c.walkingIdx]:c.restingIdx>=0?S.legs[c.restingIdx]:null;
+    const planKmh=activeLeg&&activeLeg.walk>0?activeLeg.km/(activeLeg.walk/60):(S.paceMin>0?60/S.paceMin:3.8);
     const spdCls=isFinite(dispSpd)
       ?(dispSpd>planKmh+0.1?'spd-ok'    // green: above plan
       :dispSpd>=planKmh-0.1?''          // white: on par
