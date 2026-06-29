@@ -234,7 +234,7 @@
 </svg>
 
 <div class="wrap">
-  <div class="masthead"><h1>Oxfam <b>Trailwalker</b> 100</h1><div class="sub">20–22 Nov 2026</div><div id="donatelink" style="display:none;margin-top:4px"><a id="donatehref" href="#" target="_blank" style="color:#f4a300;font-size:12px;font-weight:600;text-decoration:none;border:1px solid #f4a300;border-radius:12px;padding:2px 10px">Donate</a></div></div>
+  <div class="masthead"><h1>Oxfam <b>Trailwalker</b> 100</h1><div class="sub">20–22 Nov 2026</div></div>
   <div class="syncbar" id="syncbar"></div>
 
   <div class="hero">
@@ -1318,8 +1318,6 @@
     }catch(e){}
     const eTNum=document.getElementById('teamNum'); if(eTNum&&!eTNum.matches(':focus'))eTNum.value=S.teamNum||'0565';
     const eDon=document.getElementById('donateUrl'); if(eDon&&!eDon.matches(':focus'))eDon.value=S.donateUrl||'';
-    const dlDiv=document.getElementById('donatelink'),dlA=document.getElementById('donatehref');
-    if(dlDiv&&dlA){ if(S.donateUrl){dlDiv.style.display='block';dlA.href=S.donateUrl;}else{dlDiv.style.display='none';} }
     const eSvc=document.getElementById('ejsServiceId'); if(eSvc&&!eSvc.matches(':focus'))eSvc.value=S.ejsServiceId||'';
     const eTpl=document.getElementById('ejsTemplateId'); if(eTpl&&!eTpl.matches(':focus'))eTpl.value=S.ejsTemplateId||'';
     const eKey=document.getElementById('ejsPublicKey'); if(eKey&&!eKey.matches(':focus'))eKey.value=S.ejsPublicKey||'';
@@ -1368,16 +1366,17 @@
   function updateSyncbar(){
     const sb=document.getElementById('syncbar'); if(!sb) return;
     let cls,html;
+    const donateBtn=S&&S.donateUrl?'<a href="'+S.donateUrl+'" target="_blank" style="margin-left:auto;color:#f4a300;font-size:11px;font-weight:600;text-decoration:none;border:1px solid #f4a300;border-radius:10px;padding:1px 8px;flex-shrink:0">Donate</a>':'';
     if(READONLY){
       cls='watch';
-      html='<span class="dot"></span><span class="msg">Watching race <b>'+RACE+'</b> · '+(SYNCED?'live, read-only':'<span style="color:var(--behind)">can’t connect — check the link</span>')+'</span>';
+      html='<span class="dot"></span><span class="msg">Watching race <b>'+RACE+'</b> · '+(SYNCED?'live, read-only':'<span style="color:var(--behind)">can’t connect — check the link</span>')+'</span>'+donateBtn;
     } else if(SYNCED){
       cls='live';
       html='<span class="dot"></span><span class="msg">Live · race <b>'+RACE+'</b> · timer</span>'+
-        '<button class="copy" id="qrBtn">Crew QR & link</button>';
+        '<button class="copy" id="qrBtn">Crew QR & link</button>'+donateBtn;
     } else {
       cls='off';
-      html='<span class="dot"></span><span class="msg">Local only — add Firebase config to share live (see setup)</span>';
+      html='<span class="dot"></span><span class="msg">Local only — add Firebase config to share live (see setup)</span>'+donateBtn;
     }
     sb.className='syncbar '+cls; sb.innerHTML=html;
     const qb=document.getElementById('qrBtn'); if(qb) qb.onclick=showQR;
