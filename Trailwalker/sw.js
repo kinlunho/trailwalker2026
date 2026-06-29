@@ -1,4 +1,4 @@
-const CACHE = 'tw2026-v1';
+const CACHE = 'tw2026-v3';
 const ASSETS = ['/', '/index.html'];
 
 self.addEventListener('install', e => {
