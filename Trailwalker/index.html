@@ -684,9 +684,11 @@
           // current section: anchor to NOW, then add remaining time at blended speed
           // This is key: we use now as the base so elapsed time is already baked in
           const secStart=(prevDep(i)||base).getTime();
-          const kmSoFar=markerSnap&&markerSnap.km>0?(markerSnap.km-(S.legs.slice(0,i).reduce((a,l)=>a+l.km,0))):0;
+          const secStartKm=S.legs.slice(0,i).reduce((a,l)=>a+l.km,0);
+          const kmSoFar=markerSnap&&markerSnap.km>secStartKm?Math.min(markerSnap.km-secStartKm,l.km):0;
           const planKmh=l.km/(l.walk/60);
-          const liveKmh=markerSnap&&markerSnap.spd>0?markerSnap.spd:(walkSpeed>0?walkSpeed:planKmh);
+          // Use overall walking speed for projection — more stable than per-marker speed
+          const liveKmh=walkSpeed>0?walkSpeed:planKmh;
           const elapsed=(now.getTime()-secStart)/MS;
           const trust=Math.min(1,Math.min(kmSoFar/2, elapsed/30));
           const blendedKmh=planKmh*(1-trust)+liveKmh*trust;
