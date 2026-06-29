@@ -931,7 +931,7 @@
             const firstLeg=S.legs[0];
             const startTime=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
             const cc=compute();
-            let msg='\ud83c\udfc1 TW2026 \u2014 We started at '+startTime+'!';
+            let msg='\ud83c\udfc1 Team 0565 \u2014 We started at '+startTime+'!';
             if(firstLeg){
               msg+=' | First: '+firstLeg.name+' ('+firstLeg.km+'km)';
               msg+=' | \u2193'+firstLeg.desc+'m \u2191'+firstLeg.asc+'m';
@@ -940,7 +940,7 @@
             msg+=overallLine(cc);
             msg+=mapLink();
             sendSMS(msg);
-          } catch(e){ sendSMS('\ud83c\udfc1 TW2026 \u2014 We have started! Good luck team!'); }
+          } catch(e){ sendSMS('\ud83c\udfc1 Team 0565 \u2014 We have started! Good luck team!'); }
           save(); render();
         }; sw.appendChild(b); }
     } else if(c.action==='done'){
@@ -1175,7 +1175,7 @@
             const aheadTxt=cc.vsTargetMin<=0?' | \u25b2 '+durTxt(-cc.vsTargetMin)+' ahead':' | \u25bc '+durTxt(cc.vsTargetMin)+' behind';
             const routeMap='https://www.google.com/maps/d/viewer?mid=17KKPiqSM3PdpfHOTeC347SdbvtmKTa4';
             const posLink=arrivalSnap?'\n\nPosition: https://maps.google.com/?q='+arrivalSnap.lat.toFixed(5)+','+arrivalSnap.lng.toFixed(5)+'\nOTW Route: '+routeMap:'\n\nOTW Route: '+routeMap;
-            msg='\ud83c\udfc3 TW2026 \u2014 Arrived '+l.name+' at '+arrTime
+            msg='\ud83c\udfc3 Team 0565 \u2014 Arrived '+l.name+' at '+arrTime
               +' | '+kmDone+'km done'
               +(spd?' | avg '+spd+' km/h':'')
               +etaTxt
@@ -1183,7 +1183,7 @@
               +' of target'
               +overallLine(cc)
               +posLink;
-          } catch(e){ msg='\ud83c\udfc3 TW2026 \u2014 Arrived '+l.name+' at '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
+          } catch(e){ msg='\ud83c\udfc3 Team 0565 \u2014 Arrived '+l.name+' at '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
           sendSMS(msg);
           save(); render();
         };
@@ -1217,16 +1217,17 @@
             const cc=compute();
             const leaveTime=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
             const nextLeg=S.legs[i+1];
-            let msg='\ud83d\udeb6 TW2026 \u2014 Left '+l.name+' at '+leaveTime;
+            let msg='\ud83d\udeb6 Team 0565 \u2014 Left '+l.name+' at '+leaveTime;
             if(nextLeg){
               msg+=' | Next: '+nextLeg.name+' ('+nextLeg.km+'km)';
               msg+=' | \u2193'+nextLeg.desc+'m \u2191'+nextLeg.asc+'m';
               if(cc.nextETA){ msg+=' | ETA: '+cc.nextETA.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
             }
             msg+=overallLine(cc);
+            msg+=wxLine();
             msg+=mapLink();
             sendSMS(msg);
-          } catch(e){ sendSMS('\ud83d\udeb6 TW2026 \u2014 Left '+l.name+' at '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})); }
+          } catch(e){ sendSMS('\ud83d\udeb6 Team 0565 \u2014 Left '+l.name+' at '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})); }
           save(); render();
         };
         row.appendChild(btn); el.appendChild(row);
