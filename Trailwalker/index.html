@@ -929,12 +929,17 @@
       const secKm=Math.round((c.km-prevKm)*10)/10;
       const key='cp_'+i;
       const nm=(window._cpNames[key]||(c.isFinish?'Finish':'Section '+(i+1))).replace(/"/g,'&quot;');
+      const kmField=c.isFinish
+        ? '<span style="font-size:11px;color:var(--lamp);font-weight:700;min-width:54px">'+c.km+'km</span>'
+        : '<input type="number" value="'+c.km+'" min="0.1" step="0.1" data-cpidx="'+i+'" '+
+          'style="width:56px;font-size:11px;padding:3px 5px;background:var(--bg2);border:1px solid var(--line);border-radius:6px;color:var(--ink);text-align:right" '+
+          'onchange="window._cpMoveKm(this)">';
       const row='<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;padding:6px 8px;background:var(--card);border:1px solid var(--line);border-radius:8px">'+
-        '<span style="font-size:10px;color:var(--muted);min-width:36px">'+c.km+'km</span>'+
+        kmField+
         '<input type="text" value="'+nm+'" data-cpkey="'+key+'" placeholder="Section name" '+
         'style="flex:1;font-size:12px;padding:3px 6px;background:var(--bg2);border:1px solid var(--line);border-radius:6px;color:var(--ink)" '+
         'onchange="window._cpRename(this)">'+
-        '<span style="font-size:10px;color:var(--faint);white-space:nowrap">'+secKm+'km</span>'+
+        '<span style="font-size:10px;color:var(--faint);white-space:nowrap">'+secKm+'km sec</span>'+
         (c.isFinish?'<span style="font-size:9px;color:var(--lamp);font-weight:700;padding:2px 6px;background:rgba(244,178,74,.16);border-radius:4px">FINISH</span>':
         '<button style="font-size:11px;padding:2px 7px;border:1px solid var(--line);border-radius:5px;background:transparent;color:var(--muted);cursor:pointer" '+
         'onclick="window._cpRemove('+i+')">✕</button>')+
@@ -943,6 +948,27 @@
       return row;
     }).join('');
   }
+  window._cpMoveKm=function(inp){
+    const i=parseInt(inp.dataset.cpidx);
+    const newKm=parseFloat(inp.value);
+    if(!isFinite(newKm)||newKm<=0) return;
+    const total=RT.total_km||S.legs.reduce((a,l)=>a+l.km,0)||100;
+    if(newKm>=total){ inp.value=window._cpList[i].km; return; }
+    // check neighbours
+    const prevKm=i>0?window._cpList[i-1].km:0;
+    const nextKm=i<window._cpList.length-1?window._cpList[i+1].km:total;
+    if(newKm<=prevKm||newKm>=nextKm){ inp.value=window._cpList[i].km; return; }
+    window._cpList[i].km=Math.round(newKm*10)/10;
+    window._cpList[i].frac=Math.round(newKm/total*10000)/10000;
+    // rebuild sections
+    if(_gpxData){
+      const fracs=[...window._cpList.map(c=>c.frac),1.0];
+      S.legs=buildLegsFromGPX(_gpxData,fracs);
+      window._cpList.forEach((c,j)=>{ const nm=window._cpNames&&window._cpNames['cp_'+j]; if(nm&&S.legs[j])S.legs[j].name=nm; });
+      save(); render(); rlAutoSave();
+    }
+    renderCpList();
+  };
   window._cpRename=function(inp){
     if(!window._cpNames) window._cpNames={};
     const key=inp.dataset.cpkey;
