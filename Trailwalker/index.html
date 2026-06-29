@@ -536,6 +536,12 @@
     S.legs.forEach(l=>{ cum+=l.walk; plArr.push(new Date(base.getTime()+cum*MS)); cum+=(l.finish?0:l.brk); });
     const plFinish=plArr[plArr.length-1]; const totalPlanMin=(plFinish-base)/MS;
     const tgtArr=plArr.map(d=> new Date(base.getTime() + (S.targetH*60)*(((d-base)/MS)/totalPlanMin)*MS));
+    // projArr: actual arrival for completed, projected for future using current ratio
+    const projArr=plArr.map((d,i)=>{
+      if(S.legs[i].arrival) return D(S.legs[i].arrival); // actual
+      // project from now + remaining walk*ratio + breaks in between
+      return null; // filled in after ratio is computed
+    });
 
     let walkingIdx=S.legs.findIndex(l=>!l.arrival);
     let restingIdx=S.legs.findIndex(l=>l.arrival&&!l.departure&&!l.finish);
@@ -579,11 +585,23 @@
 
     let projFinish, remBreak=0;
     if(action==='done'){ projFinish=D(S.legs[S.legs.length-1].arrival); }
-    else{ let remWalk=0;
-      S.legs.forEach((l,i)=>{ if(!l.arrival)remWalk+=l.walk; if(i>=walkingIdx&&!l.finish&&i!==restingIdx)remBreak+=l.brk; });
-      if(action==='leave')remBreak+=S.legs[restingIdx].brk;
-      const anc=action==='arrive'&&arrivedIdx>=0?(D(S.legs[arrivedIdx].departure)):(action==='leave'?D(S.legs[restingIdx].arrival):base);
-      projFinish=new Date((anc?anc.getTime():base.getTime())+(remWalk*ratio+remBreak)*MS);
+    else{
+      let remWalk=0;
+      S.legs.forEach((l,i)=>{ if(!l.arrival)remWalk+=l.walk; if(!l.finish&&!l.arrival&&i!==restingIdx)remBreak+=l.brk; });
+      if(action==='leave') remBreak+=S.legs[restingIdx].brk; // add current rest
+      // anchor: if walking use now, if resting use departure time of current section
+      const anc=action==='leave'?D(S.legs[restingIdx].arrival):now;
+      projFinish=new Date(anc.getTime()+(remWalk*ratio+remBreak)*MS);
+    }
+    // now fill in projArr using ratio and projFinish anchor
+    { let ancT=(action==='leave'?D(S.legs[restingIdx].arrival):now).getTime();
+      let cumW=0,cumB=0;
+      S.legs.forEach((l,i)=>{
+        if(l.arrival){ projArr[i]=D(l.arrival); ancT=l.departure?D(l.departure).getTime():ancT; cumW=0; cumB=0; return; }
+        cumW+=l.walk*ratio;
+        projArr[i]=new Date(ancT+cumW*MS+cumB*MS);
+        cumB+=(l.finish?0:l.brk);
+      });
     }
     const vsTargetMin=begun?(projFinish-targetFinish)/MS:0;
     const bufferCutMin=(cutoff-projFinish)/MS;
@@ -594,7 +612,7 @@
     const tgtPct=Math.max(0,Math.min(100,(S.targetH*60)/cutWin*100));
     const paceForTarget=(S.targetH*60-totalBreak)/TOTAL;
 
-    return {base,begun,cutoff,targetFinish,now,plArr,tgtArr,plFinish,totalPlanMin,totalBreak,projFinish,TOTAL,
+    return {base,begun,cutoff,targetFinish,now,plArr,tgtArr,projArr,plFinish,totalPlanMin,totalBreak,projFinish,TOTAL,
       ratio,movingMin,breakMin,kmDone,remKm,walkSpeed,vsTargetMin,bufferCutMin,reqPaceTarget,paceForTarget,
       projPct,tgtPct,action,actionIdx,walkingIdx,restingIdx,arrivedIdx,liveRest,liveRestMs,prevDep,liveMoving,liveRestTotal,elapsed,liveSectionWalk,
       nextIdx,nextETA,nextMins,posKm,mv17,cum17,vs17Min:(mv17-cum17)};
@@ -802,7 +820,7 @@
     const c=compute();
     const legIdx=S.legs.indexOf(leg);
     if(legIdx<0) return null;
-    const eta=c.tgtArr&&c.tgtArr[legIdx]?c.tgtArr[legIdx]:null;
+    const eta=(c.projArr&&c.projArr[legIdx])||(c.tgtArr&&c.tgtArr[legIdx])||null;
     if(!eta) return null;
     const etaDate=eta.getFullYear()*10000+(eta.getMonth()+1)*100+eta.getDate();
     const fc=WX.forecast.find(f=>parseInt(f.date)===etaDate)||WX.forecast[0];
@@ -1066,7 +1084,13 @@
         const mtxt= mm>=0 ? '~'+mm+' min' : 'overdue '+(-mm)+'m';
         rt='<div class="plan">est. arrival</div><div class="act" style="color:var(--lamp)">'+clock(c.nextETA)+'</div><div class="delta" style="color:var(--lamp)">'+mtxt+'</div>';
       } else {
-        rt='<div class="plan">target by</div><div class="act" style="color:var(--muted)">'+clock(tgt)+'</div><div class="delta sky">'+sky(tgt)+'</div>';
+        // show projected arrival for future sections (based on actual pace ratio)
+        const projA=c.projArr&&c.projArr[i];
+        const isTgt=!c.begun||c.ratio===1||!projA;
+        const showT=projA||tgt;
+        const diffMin=projA?Math.round((projA-tgt)/MS):0;
+        const diffTxt=(!isTgt&&diffMin!==0)?('<div class="delta '+(diffMin<=0?'ahead':'behind')+'">'+signTxt(diffMin)+'</div>'):'<div class="delta sky">'+sky(showT)+'</div>';
+        rt='<div class="plan">'+(isTgt?'target by':'proj.')+'</div><div class="act" style="color:'+(isTgt?'var(--muted)':'var(--lamp)')+'">'+clock(showT)+'</div>'+diffTxt;
       }
       let splits='';
       if(arrived){ const pd=c.prevDep(i); const mv=pd?(D(l.arrival)-pd)/MS:null; const spd=(mv&&l.km>0)?l.km/(mv/60):null;
