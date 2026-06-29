@@ -35,11 +35,11 @@
   .syncbar.off .dot{background:var(--faint);}
   .syncbar.watch .dot{background:var(--rest); box-shadow:0 0 0 4px rgba(106,163,196,.18);}
   .syncbar .msg{color:var(--muted);} .syncbar .msg b{color:var(--ink);}
-  .syncbar .copy{font:inherit; font-size:12px; font-weight:700; color:#1a1206;
+  .syncbar .copy{margin-left:auto; font:inherit; font-size:12px; font-weight:700; color:#1a1206;
     background:var(--lamp); border:none; border-radius:8px; padding:6px 11px; cursor:pointer;}
   .syncbar .copy:hover{filter:brightness(1.05);}
   .syncbar .donate{font:inherit; font-size:12px; font-weight:700; color:#1a1206;
-    background:var(--lamp); border:none; border-radius:8px; padding:6px 11px; cursor:pointer; text-decoration:none; margin-left:8px;}
+    background:var(--lamp); border:none; border-radius:8px; padding:6px 11px; cursor:pointer; text-decoration:none; margin-left:6px;}
   .syncbar .donate:hover{filter:brightness(1.05);}
   .qrmodal{position:fixed; inset:0; z-index:50; background:rgba(8,12,16,.82); display:none; align-items:center; justify-content:center; padding:24px;}
   .qrmodal.open{display:flex;}
@@ -1392,16 +1392,17 @@
     let cls,html;
     const donateUrl=(S&&S.donateUrl)||'https://event.oxfamtrailwalker.org.hk/en/Donation/Sponsorship?tId=r1tQWNW__bA%3D';
     const donateBtn='<a href="'+donateUrl+'" target="_blank" class="donate">Donate</a>';
+    const donateBtnRight='<a href="'+donateUrl+'" target="_blank" class="donate" style="margin-left:auto">Donate</a>';
     if(READONLY){
       cls='watch';
-      html='<span class="dot"></span><span class="msg">Watching race <b>'+RACE+'</b> · '+(SYNCED?'live, read-only':'<span style="color:var(--behind)">can’t connect — check the link</span>')+'</span>'+donateBtn;
+      html='<span class="dot"></span><span class="msg">Watching race <b>'+RACE+'</b> · '+(SYNCED?'live, read-only':'<span style="color:var(--behind)">can’t connect — check the link</span>')+'</span>'+donateBtnRight;
     } else if(SYNCED){
       cls='live';
       html='<span class="dot"></span><span class="msg">Live · race <b>'+RACE+'</b> · timer</span>'+
-        '<span style="margin-left:auto;display:flex;gap:0"><button class="copy" id="qrBtn">Crew QR</button>'+donateBtn+'</span>';
+        '<button class="copy" id="qrBtn">Crew QR</button>'+donateBtn;
     } else {
       cls='off';
-      html='<span class="dot"></span><span class="msg">Local only — add Firebase config to share live (see setup)</span>'+donateBtn;
+      html='<span class="dot"></span><span class="msg">Local only — add Firebase config to share live (see setup)</span>'+donateBtnRight;
     }
     sb.className='syncbar '+cls; sb.innerHTML=html;
     const qb=document.getElementById('qrBtn'); if(qb) qb.onclick=showQR;
