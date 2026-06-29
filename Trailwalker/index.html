@@ -379,9 +379,7 @@
     <div class="field"><label for="startInput">Planned start</label><input type="datetime-local" id="startInput"></div>
     <div class="field" id="actualStartField" style="display:none"><label for="actualStartInput">Actual start</label><input type="datetime-local" id="actualStartInput"></div>
     <div class="field"><label for="cutoffInput">Cutoff (hours)</label><input type="number" id="cutoffInput" min="1" step="1"></div>
-    <h3 style="margin-top:16px">Fine-tune sections</h3>
-    <div id="planEdit"></div>
-    <button class="btn" id="addLegBtn" style="margin-top:4px">+ Add section</button>
+    <div id="planEdit" style="display:none"></div>
     <h3 style="margin-top:16px">Email notifications</h3>
     <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Get email alerts on start, each checkpoint departure and arrival. Powered by EmailJS (free).</div>
     <div class="field"><label for="teamNum">Team number</label><input type="text" id="teamNum" placeholder="0565" style="width:80px;text-align:left"></div>
@@ -935,7 +933,28 @@
         : '<input type="number" value="'+secKm+'" min="0.1" step="0.1" data-cpidx="'+i+'" data-prevkm="'+prevKm+'" '+
           'style="width:58px;font-size:11px;padding:3px 5px;background:var(--bg2);border:1px solid var(--line);border-radius:6px;color:var(--ink);text-align:right" '+
           'onchange="window._cpMoveKm(this)">';
-      const row='<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;padding:6px 8px;background:var(--card);border:1px solid var(--line);border-radius:8px">'+
+      // fine-tune fields from S.legs[i] if available
+      const leg=S.legs&&S.legs[i];
+      const walkVal=leg?leg.walk:0;
+      const restVal=leg?leg.brk:10;
+      const ascVal=leg?leg.asc:0;
+      const diffVal=leg?leg.d:2;
+      const supVal=leg?leg.sup:false;
+      const ftRow=c.isFinish?'':
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;padding:4px 0 2px;border-top:1px solid var(--line);margin-top:6px;align-items:center">'+
+        '<span style="font-size:9px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em">walk·m</span>'+
+        '<input type="number" value="'+walkVal+'" min="1" step="1" data-legidx="'+i+'" data-field="walk" style="width:52px;font-size:11px;padding:2px 4px;background:var(--bg2);border:1px solid var(--line);border-radius:5px;color:var(--ink)" onchange="window._cpLegField(this)">'+
+        '<span style="font-size:9px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em">rest·m</span>'+
+        '<input type="number" value="'+restVal+'" min="0" step="1" data-legidx="'+i+'" data-field="brk" style="width:48px;font-size:11px;padding:2px 4px;background:var(--bg2);border:1px solid var(--line);border-radius:5px;color:var(--ink)" onchange="window._cpLegField(this)">'+
+        '<span style="font-size:9px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em">climb·m</span>'+
+        '<input type="number" value="'+ascVal+'" min="0" step="10" data-legidx="'+i+'" data-field="asc" style="width:56px;font-size:11px;padding:2px 4px;background:var(--bg2);border:1px solid var(--line);border-radius:5px;color:var(--ink)" onchange="window._cpLegField(this)">'+
+        '<select data-legidx="'+i+'" data-field="d" style="font-size:11px;padding:2px 4px;background:var(--bg2);border:1px solid var(--line);border-radius:5px;color:var(--ink)" onchange="window._cpLegField(this)">'+
+        [1,2,3].map(d=>'<option value="'+d+'"'+(d===diffVal?' selected':'')+'>'+'●'.repeat(d)+'○'.repeat(3-d)+'</option>').join('')+
+        '</select>'+
+        '<label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:3px"><input type="checkbox" '+(supVal?'checked':'')+' data-legidx="'+i+'" data-field="sup" onchange="window._cpLegField(this)"> crew</label>'+
+        '</div>';
+      const row='<div style="margin-bottom:8px;padding:8px;background:var(--card);border:1px solid var(--line);border-radius:8px">'+
+        '<div style="display:flex;align-items:center;gap:6px">'+
         '<input type="text" value="'+nm+'" data-cpkey="'+key+'" placeholder="Section name" '+
         'style="flex:1;font-size:12px;padding:3px 6px;background:var(--bg2);border:1px solid var(--line);border-radius:6px;color:var(--ink)" '+
         'onchange="window._cpRename(this)">'+
@@ -943,6 +962,7 @@
         (c.isFinish?'<span style="font-size:9px;color:var(--lamp);font-weight:700;padding:2px 6px;background:rgba(244,178,74,.16);border-radius:4px">FINISH</span>':
         '<button style="font-size:11px;padding:2px 7px;border:1px solid var(--line);border-radius:5px;background:transparent;color:var(--muted);cursor:pointer" '+
         'onclick="window._cpRemove('+i+')">✕</button>')+
+        '</div>'+ftRow+
         '</div>';
       prevKm=c.km;
       return row;
@@ -968,6 +988,15 @@
       save(); render(); rlAutoSave();
     }
     renderCpList();
+  };
+  window._cpLegField=function(inp){
+    const i=parseInt(inp.dataset.legidx);
+    const field=inp.dataset.field;
+    if(!S.legs||!S.legs[i]) return;
+    if(field==='sup') S.legs[i].sup=inp.checked;
+    else if(field==='d'){ S.legs[i].d=parseInt(inp.value); }
+    else { const v=parseFloat(inp.value); if(isFinite(v)&&v>=0) S.legs[i][field]=field==='brk'?Math.round(v):Math.round(v); }
+    save(); render(); rlAutoSave();
   };
   window._cpRename=function(inp){
     if(!window._cpNames) window._cpNames={};
