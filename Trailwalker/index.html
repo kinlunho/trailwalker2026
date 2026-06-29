@@ -664,19 +664,19 @@
     let projFinish, remBreak=0;
     if(action==='done'){ projFinish=D(S.legs[S.legs.length-1].arrival); }
     else{
-      // Build projection purely from actuals + plan
-      // t starts from base; completed sections advance t to actual departure
-      // current section uses now; future sections use plan
+      // Projection built purely from actuals + plan:
+      // - completed sections: t advances to actual departure time
+      // - currently resting: t anchors to now (rest time passing counts)
+      // - current walking section: blended speed for remaining km
+      // - future sections: plan walk + plan rest
       let t=base.getTime();
       S.legs.forEach((l,i)=>{
         if(l.arrival){
           projArr[i]=D(l.arrival);
           if(l.departure){
-            // fully completed: use actual departure time
-            t=D(l.departure).getTime();
+            t=D(l.departure).getTime(); // fully done: use actual departure
           } else {
-            // arrived but still resting: anchor is now (rest time is passing)
-            t=now.getTime();
+            t=now.getTime(); // still resting: anchor to now
           }
           return;
         }
