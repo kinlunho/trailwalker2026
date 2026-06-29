@@ -607,16 +607,21 @@
     const vsTargetMin=begun?(projFinish-targetFinish)/MS:0;
     const bufferCutMin=(cutoff-projFinish)/MS;
     const minsToTarget=(targetFinish-now)/MS;
-    const remBreakMins=S.legs.reduce((a,l,i)=>a+(!l.arrival&&!l.finish?l.brk:0),0)
+    const remBreakMins=S.legs.reduce((a,l)=>a+(!l.arrival&&!l.finish?l.brk:0),0)
       +(action==='leave'?S.legs[restingIdx].brk:0);
+    // pace needed to hit target finish
     const reqPaceTarget= remKm>0 ? (minsToTarget-remBreakMins)/remKm : Infinity;
+    // pace needed to hold projected finish = remaining walk km / remaining projected walk time
+    // remaining projected walk time = sum of remaining sections walk*ratio
+    const remProjWalkMin=S.legs.reduce((a,l)=>a+(!l.arrival?l.walk*ratio:0),0);
+    const reqPaceProj= remKm>0&&remProjWalkMin>0 ? remProjWalkMin/remKm : Infinity; // min/km
     const cutWin=S.cutoffH*60;
     const projPct=Math.max(0,Math.min(100,((projFinish-base)/MS)/cutWin*100));
     const tgtPct=Math.max(0,Math.min(100,(S.targetH*60)/cutWin*100));
     const paceForTarget=(S.targetH*60-totalBreak)/TOTAL;
 
     return {base,begun,cutoff,targetFinish,now,plArr,tgtArr,projArr,plFinish,totalPlanMin,totalBreak,projFinish,TOTAL,
-      ratio,movingMin,breakMin,kmDone,remKm,walkSpeed,vsTargetMin,bufferCutMin,reqPaceTarget,paceForTarget,
+      ratio,movingMin,breakMin,kmDone,remKm,walkSpeed,vsTargetMin,bufferCutMin,reqPaceTarget,reqPaceProj,paceForTarget,
       projPct,tgtPct,action,actionIdx,walkingIdx,restingIdx,arrivedIdx,liveRest,liveRestMs,prevDep,liveMoving,liveRestTotal,elapsed,liveSectionWalk,
       nextIdx,nextETA,nextMins,posKm,mv17,cum17,vs17Min:(mv17-cum17)};
   }
@@ -1043,11 +1048,8 @@
       rp.innerHTML='≥'+kmhTxt(c.reqPaceTarget)+'<small> km/h</small>';
     } else {
       if(rpLabel) rpLabel.textContent='Need km/h · proj.';
-      // pace needed to hold current projected finish = remKm / remWalkTime at current speed
-      // walkSpeed is in km/h, convert to min/km for kmhTxt
-      const curKmh=isFinite(c.walkSpeed)&&c.walkSpeed>0?c.walkSpeed:(S.paceMin>0?60/S.paceMin:3.5);
-      const curMinPerKm=60/curKmh; // this is what kmhTxt expects
-      rp.innerHTML='<span style="color:var(--behind)">≥'+kmhTxt(curMinPerKm)+'<small> km/h</small></span>';
+      // reqPaceProj is in min/km — kmhTxt converts to km/h via 60/p
+      rp.innerHTML='<span style="color:var(--behind)">≥'+kmhTxt(c.reqPaceProj)+'<small> km/h</small></span>';
     }
     const bufEl=document.getElementById('buffer');
     if(c.liveSectionWalk!=null){
