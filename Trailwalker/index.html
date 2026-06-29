@@ -1388,14 +1388,14 @@
     const sb=document.getElementById('syncbar'); if(!sb) return;
     let cls,html;
     const donateUrl=(S&&S.donateUrl)||'https://event.oxfamtrailwalker.org.hk/en/Donation/Sponsorship?tId=r1tQWNW__bA%3D';
-    const donateBtn='<a href="'+donateUrl+'" target="_blank" style="font:inherit;font-size:12px;font-weight:700;color:#1a1206;background:var(--lamp);border:none;border-radius:8px;padding:3px 8px;text-decoration:none;flex-shrink:0;cursor:pointer">Donate</a>';
+    const donateBtn='<a href="'+donateUrl+'" target="_blank" style="margin-left:auto;font:inherit;font-size:12px;font-weight:700;color:#1a1206;background:var(--lamp);border:none;border-radius:8px;padding:6px 11px;text-decoration:none;flex-shrink:0;cursor:pointer">Donate</a>';
     if(READONLY){
       cls='watch';
       html='<span class="dot"></span><span class="msg">Watching race <b>'+RACE+'</b> · '+(SYNCED?'live, read-only':'<span style="color:var(--behind)">can’t connect — check the link</span>')+'</span>'+donateBtn;
     } else if(SYNCED){
       cls='live';
       html='<span class="dot"></span><span class="msg">Live · race <b>'+RACE+'</b> · timer</span>'+
-        '<button class="copy" id="qrBtn">Crew QR & link</button>'+donateBtn;
+        '<button class="copy" id="qrBtn">Crew QR</button>'+donateBtn;
     } else {
       cls='off';
       html='<span class="dot"></span><span class="msg">Local only — add Firebase config to share live (see setup)</span>'+donateBtn;
