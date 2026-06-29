@@ -611,10 +611,10 @@
       +(action==='leave'?S.legs[restingIdx].brk:0);
     // pace needed to hit target finish
     const reqPaceTarget= remKm>0 ? (minsToTarget-remBreakMins)/remKm : Infinity;
-    // pace needed to hold projected finish = remaining walk km / remaining projected walk time
-    // remaining projected walk time = sum of remaining sections walk*ratio
-    const remProjWalkMin=S.legs.reduce((a,l)=>a+(!l.arrival?l.walk*ratio:0),0);
-    const reqPaceProj= remKm>0&&remProjWalkMin>0 ? remProjWalkMin/remKm : Infinity; // min/km
+    // pace needed to hold projected finish = weighted avg plan speed of remaining sections
+    // = total remaining km / total remaining plan walk time (NOT scaled by ratio — that's what you need to maintain)
+    const remPlanWalkMin=S.legs.reduce((a,l)=>a+(!l.arrival?l.walk:0),0);
+    const reqPaceProj= remKm>0&&remPlanWalkMin>0 ? remPlanWalkMin/remKm : Infinity; // min/km at plan pace
     const cutWin=S.cutoffH*60;
     const projPct=Math.max(0,Math.min(100,((projFinish-base)/MS)/cutWin*100));
     const tgtPct=Math.max(0,Math.min(100,(S.targetH*60)/cutWin*100));
