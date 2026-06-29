@@ -739,7 +739,7 @@
     let sent=0, failed=0;
     emails.forEach(email=>{
       if(!email) return;
-      window.emailjs.send(svcId,tplId,{to_email:email,message:message,subject:'Trailwalker 0565 Update'})
+      window.emailjs.send(svcId,tplId,{to_email:email,message:message.replace(/\n/g,'<br>'),subject:'Trailwalker 0565 Update'})
       .then(r=>{ sent++;
         if(st) st.textContent='✓ Sent '+sent+'/'+(sent+failed)+' (status '+r.status+')';
         setTimeout(()=>{ if(st) st.textContent=''; },8000);
