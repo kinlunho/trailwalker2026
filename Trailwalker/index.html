@@ -570,7 +570,15 @@
     const liveRestTotal = breakMin + (action==='leave' ? Math.max(0,(now-D(S.legs[restingIdx].arrival))/MS) : 0);
     const elapsed = begun ? (now-base)/MS : 0;
 
-    const ratio=plWalkDone>0?movingMin/plWalkDone:1;
+    // ratio: include current section in-progress for better real-time accuracy
+    let liveMovingForRatio=movingMin;
+    let livePlanForRatio=plWalkDone;
+    if(action==='arrive'&&walkingIdx>=0){
+      const secElapsed=Math.max(0,(now-(prevDep(walkingIdx)||base))/MS);
+      liveMovingForRatio+=secElapsed;
+      livePlanForRatio+=S.legs[walkingIdx].walk;
+    }
+    const ratio=livePlanForRatio>0?liveMovingForRatio/livePlanForRatio:1;
     const remKm=TOTAL-kmDone;
     const walkSpeed=movingMin>0?kmDone/(movingMin/60):NaN;
 
