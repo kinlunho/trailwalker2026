@@ -1379,7 +1379,7 @@
     document.getElementById('tstrip').innerHTML=
       '<div class="seg"><span class="k">Target</span><span class="v">'+durTxt(S.targetH*60)+'</span></div><span class="vs">vs</span>'+
       '<div class="seg"><span class="k">Projected</span><span class="v">'+durTxt((c.projFinish-c.base)/MS)+'</span></div>'+
-      '<div class="verdict '+(ahead?'ahead':'behindc')+'"><div class="sm">'+(ahead?'ahead of target':'behind target')+'</div>'+
+      '<div class="verdict '+(ahead?'ahead':'behindc')+'"><div class="sm">'+(ahead?'ahead of plan':'behind plan')+'</div>'+
       '<div class="big">'+(ahead?'▲ ':'▼ ')+durTxt(Math.abs(c.vsTargetMin))+'</div></div>';
     document.getElementById('tstrip').onclick= READONLY ? null : ()=>{ const p=document.getElementById('panel'); p.classList.add('open'); p.scrollIntoView({behavior:'smooth',block:'start'}); };
     const v17=document.getElementById('v17strip');
