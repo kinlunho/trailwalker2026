@@ -857,6 +857,7 @@
       name,
       savedAt:new Date().toISOString(),
       gpxRoute,
+      raceName:S.raceName||'',raceKm:S.raceKm||0,raceYear:S.raceYear||new Date().getFullYear(),
       checkpoints:(window._cpList||[]).map(c=>({...c})),
       cpNames:(window._cpNames||{}),
       legs:S.legs.map(l=>({...l,arrival:null,departure:null}))
