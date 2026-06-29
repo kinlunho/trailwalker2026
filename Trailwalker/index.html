@@ -698,7 +698,7 @@
       });
       projFinish=projArr[S.legs.length-1];
     }
-    const vsTargetMin=begun?(projFinish-targetFinish)/MS:0;
+    const vsTargetMin=begun?(projFinish-plFinish)/MS:0;
     const bufferCutMin=(cutoff-projFinish)/MS;
     const minsToTarget=(targetFinish-now)/MS;
     const remBreakMins=S.legs.reduce((a,l)=>a+(!l.arrival&&!l.finish?l.brk:0),0)
