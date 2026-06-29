@@ -570,15 +570,9 @@
     const liveRestTotal = breakMin + (action==='leave' ? Math.max(0,(now-D(S.legs[restingIdx].arrival))/MS) : 0);
     const elapsed = begun ? (now-base)/MS : 0;
 
-    // ratio: include current section in-progress for better real-time accuracy
-    let liveMovingForRatio=movingMin;
-    let livePlanForRatio=plWalkDone;
-    if(action==='arrive'&&walkingIdx>=0){
-      const secElapsed=Math.max(0,(now-(prevDep(walkingIdx)||base))/MS);
-      liveMovingForRatio+=secElapsed;
-      livePlanForRatio+=S.legs[walkingIdx].walk;
-    }
-    const ratio=livePlanForRatio>0?liveMovingForRatio/livePlanForRatio:1;
+    // ratio: only use completed sections for stability; cap to reasonable range
+    // markerSnap speed is noisy early on so don't let it drive the projection
+    const ratio=plWalkDone>0?Math.min(Math.max(movingMin/plWalkDone, 0.5), 2.0):1;
     const remKm=TOTAL-kmDone;
     const walkSpeed=movingMin>0?kmDone/(movingMin/60):NaN;
 
