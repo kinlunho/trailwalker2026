@@ -323,6 +323,21 @@
       <div class="tp-read" id="tpRead"></div>
     </div>
     <h3>Race setup</h3>
+    <div style="margin-bottom:12px">
+      <div style="font-size:13px;font-weight:500;margin-bottom:6px">Route GPX</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Upload a GPX file to use any trail — auto-generates markers, section pacing from elevation profile, and enables GPS auto-checkpoint detection.</div>
+      <label style="display:inline-block;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer">
+        📂 Import GPX file<input type="file" id="gpxFile" accept=".gpx" style="display:none">
+      </label>
+      <div id="gpxStatus" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
+      <div id="gpxInfo" style="font-size:12px;color:var(--ahead);margin-top:4px"></div>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:13px;font-weight:500;margin-bottom:6px">GPS auto-detection</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Automatically detects when you pass a checkpoint (within 50m). Requires phone GPS and a loaded GPX route.</div>
+      <button class="btn" id="gpsAutoBtn" style="margin-right:6px">📍 Start GPS tracking</button>
+      <div id="gpsAutoStatus" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
+    </div>
     <div class="field"><label for="startInput">Planned start</label><input type="datetime-local" id="startInput"></div>
     <div class="field" id="actualStartField" style="display:none"><label for="actualStartInput">Actual start</label><input type="datetime-local" id="actualStartInput"></div>
     <div class="field"><label for="cutoffInput">Cutoff (hours)</label><input type="number" id="cutoffInput" min="1" step="1"></div>
@@ -756,6 +771,210 @@
     if(!S.donateUrl) return '';
     return '<br><br>❤️ Support Team '+(S.teamNum||'0565')+': <a href="'+S.donateUrl+'">Donate to Oxfam Trailwalker</a>';
   }
+
+  // ── GPX IMPORT ─────────────────────────────────────────────────────
+  function haversineKm(lat1,lon1,lat2,lon2){
+    const R=6371, dLat=(lat2-lat1)*Math.PI/180, dLon=(lon2-lon1)*Math.PI/180;
+    const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+    return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+  }
+
+  function parseGPX(text){
+    const parser=new DOMParser();
+    const doc=parser.parseFromString(text,'application/xml');
+    const trkpts=[...doc.querySelectorAll('trkpt,rtept,wpt')];
+    if(!trkpts.length) throw new Error('No track points found in GPX');
+    const pts=trkpts.map(p=>({
+      lat:parseFloat(p.getAttribute('lat')),
+      lon:parseFloat(p.getAttribute('lon')),
+      ele:parseFloat(p.querySelector('ele')?.textContent||0)
+    })).filter(p=>isFinite(p.lat)&&isFinite(p.lon));
+    if(pts.length<2) throw new Error('Too few valid points');
+
+    // Build cumulative distances
+    let cumKm=0; const cumDist=[0];
+    for(let i=1;i<pts.length;i++){
+      cumKm+=haversineKm(pts[i-1].lat,pts[i-1].lon,pts[i].lat,pts[i].lon);
+      cumDist.push(cumKm);
+    }
+    const totalKm=cumKm;
+    const fracs=cumDist.map(d=>d/totalKm);
+    const route=pts.map(p=>[Math.round(p.lat*100000)/100000,Math.round(p.lon*100000)/100000]);
+    const ele=pts.map(p=>Math.round(p.ele));
+
+    // Elevation stats
+    let asc=0,desc=0;
+    for(let i=1;i<pts.length;i++){
+      const dh=pts[i].ele-pts[i-1].ele;
+      if(dh>0) asc+=dh; else desc+=Math.abs(dh);
+    }
+    const ele_min=Math.min(...ele), ele_max=Math.max(...ele);
+
+    return {route,frac:fracs,ele,ele_min,ele_max,total_km:Math.round(totalKm*100)/100,total_asc:Math.round(asc),cp:[],pts,cumDist,totalKm};
+  }
+
+  function nabSmithWalkMin(distKm, ascM, descM){
+    // Tobler hiking function: speed(km/h) = 6 * exp(-3.5 * |slope + 0.05|)
+    // slope = dh/dh_horizontal; we apply per segment
+    // For planning: Naismith rule = 5km/h flat + 1min per 10m ascent
+    // We use Tobler averaged: add 1min/10m ascent, 0.5min/10m steep descent (>300m/km)
+    const flatMins=distKm*60/5.0; // 5 km/h flat base
+    const ascentMins=ascM/10;
+    const descentPenalty=descM>300*distKm?descM/20:0; // only penalise steep descent
+    return Math.round(flatMins+ascentMins+descentPenalty);
+  }
+
+  function generateMarkersFromRoute(gpxData){
+    // Generate a marker every 500m from the GPX route
+    const {pts,cumDist,totalKm}=gpxData;
+    const markers=[];
+    let mIdx=1;
+    for(let kmTarget=0.5;kmTarget<=totalKm+0.25;kmTarget+=0.5){
+      // find the route point closest to this km target
+      let best=0,bestDiff=Infinity;
+      for(let i=0;i<cumDist.length;i++){
+        const diff=Math.abs(cumDist[i]-kmTarget);
+        if(diff<bestDiff){bestDiff=diff;best=i;}
+      }
+      const p=pts[best];
+      markers.push([mIdx,Math.round(kmTarget*10)/10,
+        Math.round(p.lat*100000)/100000,
+        Math.round(p.lon*100000)/100000]);
+      mIdx++;
+    }
+    return markers;
+  }
+
+  function buildLegsFromGPX(gpxData, checkpointFracs){
+    // Build section legs from checkpoint fractions using Naismith pacing
+    const {pts,cumDist,totalKm,ele}=gpxData;
+    const cps=checkpointFracs.length?checkpointFracs:[1.0];
+    const legs=[]; let prevF=0;
+
+    cps.forEach((cpF,ci)=>{
+      const startKm=prevF*totalKm, endKm=cpF*totalKm;
+      const secKm=Math.round((endKm-startKm)*10)/10;
+
+      // Get elevation stats for this section
+      let secAsc=0,secDesc=0;
+      const startIdx=cumDist.findIndex(d=>d>=startKm-0.01)||0;
+      const endIdx=cumDist.findIndex(d=>d>=endKm-0.01)||pts.length-1;
+      for(let i=Math.max(1,startIdx);i<=Math.min(endIdx,pts.length-1);i++){
+        const dh=ele[i]-ele[i-1];
+        if(dh>0) secAsc+=dh; else secDesc+=Math.abs(dh);
+      }
+      secAsc=Math.round(secAsc); secDesc=Math.round(secDesc);
+      const walkMin=nabSmithWalkMin(secKm,secAsc,secDesc);
+      const kmh=secKm>0?Math.round(secKm/(walkMin/60)*100)/100:3.5;
+
+      legs.push({
+        name:'Section '+(ci+1),
+        km:secKm, d:2, walk:walkMin, brk:ci<cps.length-1?10:0,
+        asc:secAsc, desc:secDesc, t17:0, cutM:0,
+        arrival:null, departure:null, finish:ci===cps.length-1, sup:false, route:''
+      });
+      prevF=cpF;
+    });
+    return legs;
+  }
+
+  let _gpxData=null; // store parsed GPX in memory
+  let _gpsWatch=null; // GPS watchPosition handle
+  let _gpsActive=false;
+
+  function applyGPXToApp(gpxData, keepLegs){
+    // Replace OTW_ROUTE with new GPX data
+    window.OTW_ROUTE={
+      route:gpxData.route, frac:gpxData.frac, ele:gpxData.ele,
+      ele_min:gpxData.ele_min, ele_max:gpxData.ele_max,
+      total_km:gpxData.total_km, total_asc:gpxData.total_asc,
+      cp:[], sec_asc:[]
+    };
+    Object.assign(RT,window.OTW_ROUTE);
+
+    // Generate new markers
+    const newMarkers=generateMarkersFromRoute(gpxData);
+    // Replace global MARKERS array
+    MARKERS.length=0; newMarkers.forEach(m=>MARKERS.push(m));
+
+    if(!keepLegs){
+      // Build new legs from GPX total distance with Naismith pacing
+      const legs=buildLegsFromGPX(gpxData,[1.0]);
+      // Single leg for whole route — user can split into sections
+      S.legs=[{
+        name:'Full route', km:gpxData.total_km, d:2,
+        walk:nabSmithWalkMin(gpxData.total_km,gpxData.total_asc,gpxData.total_asc*0.8),
+        brk:0, asc:gpxData.total_asc, desc:Math.round(gpxData.total_asc*0.9),
+        t17:0, cutM:0, arrival:null, departure:null, finish:true, sup:false, route:''
+      }];
+    }
+    _gpxData=gpxData;
+    save(); render();
+  }
+
+  // ── GPS AUTO-CHECKPOINT DETECTION ──────────────────────────────
+  function startGPSTracking(){
+    if(!navigator.geolocation){
+      document.getElementById('gpsAutoStatus').textContent='GPS not available on this device';
+      return;
+    }
+    if(_gpsActive){ stopGPSTracking(); return; }
+    _gpsActive=true;
+    document.getElementById('gpsAutoBtn').textContent='🔴 Stop GPS tracking';
+    document.getElementById('gpsAutoStatus').textContent='Acquiring GPS signal...';
+
+    _gpsWatch=navigator.geolocation.watchPosition(pos=>{
+      const lat=pos.coords.latitude, lon=pos.coords.longitude;
+      const acc=Math.round(pos.coords.accuracy);
+      document.getElementById('gpsAutoStatus').textContent='GPS: '+lat.toFixed(5)+', '+lon.toFixed(5)+' ±'+acc+'m';
+
+      // Update markerSnap with live GPS position
+      // Find closest point on route
+      if(RT.route&&RT.route.length){
+        let bestI=0, bestD=Infinity;
+        RT.route.forEach((p,i)=>{
+          const d=haversineKm(lat,lon,p[0],p[1]);
+          if(d<bestD){bestD=d;bestI=i;}
+        });
+        const fracPos=RT.frac[bestI]||0;
+        const kmPos=fracPos*(RT.total_km||S.legs.reduce((a,l)=>a+l.km,0));
+        markerSnap={m:0,km:Math.round(kmPos*10)/10,lat,lng:lon,t:Date.now(),spd:0,acc};
+        S.markerSnap=markerSnap;
+        if(SYNCED&&db){ try{db.ref(dbpath()+'/markerSnap').set({m:0,km:markerSnap.km,lat,lng:lon,t:markerSnap.t,spd:0});}catch(e){} }
+      }
+
+      // Auto-detect checkpoint arrival: within 50m of a checkpoint end
+      const c=compute();
+      if(c.action==='arrive'&&c.walkingIdx>=0){
+        const leg=S.legs[c.walkingIdx];
+        const secEndFrac=S.legs.slice(0,c.walkingIdx+1).reduce((a,l)=>a+l.km,0)/(RT.total_km||100);
+        const cpPt=routePoint(secEndFrac);
+        if(cpPt){
+          const distToCP=haversineKm(lat,lon,cpPt[0],cpPt[1])*1000; // metres
+          if(distToCP<50&&!leg.arrival){
+            document.getElementById('gpsAutoStatus').textContent='Auto-arrived: '+leg.name+' ('+Math.round(distToCP)+'m from checkpoint)';
+            leg.arrival=new Date().toISOString();
+            // auto-snap last section marker
+            const secStart=S.legs.slice(0,c.walkingIdx).reduce((a,l)=>a+l.km,0);
+            const secEnd=secStart+leg.km;
+            const secMkrs=MARKERS.filter(mk=>mk[1]>secStart&&mk[1]<=secEnd+0.5);
+            if(secMkrs.length){ const lm=secMkrs[secMkrs.length-1]; markerSnap={m:lm[0],km:lm[1],lat:lm[2],lng:lm[3],t:Date.now(),spd:0}; S.markerSnap=markerSnap; }
+            save(); render();
+          }
+        }
+      }
+    },err=>{
+      document.getElementById('gpsAutoStatus').textContent='GPS error: '+err.message;
+    },{enableHighAccuracy:true,maximumAge:5000,timeout:15000});
+  }
+
+  function stopGPSTracking(){
+    if(_gpsWatch) navigator.geolocation.clearWatch(_gpsWatch);
+    _gpsActive=false; _gpsWatch=null;
+    document.getElementById('gpsAutoBtn').textContent='📍 Start GPS tracking';
+    document.getElementById('gpsAutoStatus').textContent='GPS tracking stopped';
+  }
+  // ─────────────────────────────────────────────────────────────
 
   function mapLink(){
     const routeMap='https://www.google.com/maps/d/viewer?mid=17KKPiqSM3PdpfHOTeC347SdbvtmKTa4';
@@ -1494,6 +1713,43 @@
   // ─────────────────────────────────────────────────────────────
 
   document.getElementById('teamNum').oninput=e=>{ S.teamNum=e.target.value.trim()||'0565'; save(); };
+
+  // GPX file import
+  document.getElementById('gpxFile').onchange=e=>{
+    const file=e.target.files[0]; if(!file) return;
+    const st=document.getElementById('gpxStatus');
+    const info=document.getElementById('gpxInfo');
+    st.textContent='Parsing '+file.name+'...';
+    info.textContent='';
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      try{
+        const gpxData=parseGPX(ev.target.result);
+        applyGPXToApp(gpxData,false);
+        st.textContent='';
+        info.textContent='✓ Loaded: '+gpxData.total_km+'km · ↑'+gpxData.total_asc.toLocaleString()+'m · '+MARKERS.length+' markers generated';
+        // Ask user if they want to keep existing sections or rebuild
+        if(confirm('GPX loaded: '+gpxData.total_km+'km · '+gpxData.total_asc+'m ascent. OK = single section. Cancel = keep existing sections with Naismith pacing.')){
+          // already applied with single leg
+        } else {
+          // Rebuild legs with Naismith pacing but keep structure
+          applyGPXToApp(gpxData,true);
+          // Recalculate walk times using Naismith
+          S.legs.forEach(l=>{
+            l.walk=nabSmithWalkMin(l.km,l.asc||l.km*30,l.desc||l.km*25);
+          });
+          save(); render();
+        }
+      } catch(err){
+        st.textContent='❌ Error: '+err.message;
+        info.textContent='';
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // GPS auto-checkpoint detection
+  document.getElementById('gpsAutoBtn').onclick=startGPSTracking;
   document.getElementById('donateUrl').oninput=e=>{ S.donateUrl=e.target.value.trim(); save(); };
   document.getElementById('ejsServiceId').oninput=e=>{ S.ejsServiceId=e.target.value.trim(); save(); saveEjsConfig(); };
   document.getElementById('ejsTemplateId').oninput=e=>{ S.ejsTemplateId=e.target.value.trim(); save(); saveEjsConfig(); };
