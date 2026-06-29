@@ -959,6 +959,7 @@
             msg+=overallLine(cc);
             msg+=wxLine();
             msg+=mapLink();
+            msg+=donateLink();
             sendSMS(msg);
           } catch(e){ sendSMS('\ud83c\udfc1 Team '+(S.teamNum||'0565')+' \u2014 We have started! Good luck team!'); }
           save(); render();
@@ -1203,7 +1204,8 @@
               +' of target'
               +overallLine(cc)
               +wxLine()
-              +posLink;
+              +posLink
+              +donateLink();
           } catch(e){ msg='\ud83c\udfc3 Team '+(S.teamNum||'0565')+' \u2014 Arrived '+l.name+' at '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
           sendSMS(msg);
           save(); render();
@@ -1247,6 +1249,7 @@
             msg+=overallLine(cc);
             msg+=wxLine();
             msg+=mapLink();
+            msg+=donateLink();
             sendSMS(msg);
           } catch(e){ sendSMS('\ud83d\udeb6 Team '+(S.teamNum||'0565')+' \u2014 Left '+l.name+' at '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})); }
           save(); render();
