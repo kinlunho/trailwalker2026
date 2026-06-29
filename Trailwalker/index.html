@@ -701,20 +701,29 @@
   function overallLine(cc){
     const kmDone=Math.round(cc.kmDone*10)/10;
     const total=Math.round(cc.TOTAL*10)/10;
+    const toGo=Math.round((cc.TOTAL-cc.kmDone)*10)/10;
     const projFinish=cc.projFinish?cc.projFinish.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'—';
     const projDur=cc.projFinish?durTxt((cc.projFinish-new Date(S.startActual))/60000):'—';
     const tgtDur=durTxt(S.targetH*60);
-    const vsT=cc.vsTargetMin<=0?('▲ '+durTxt(-cc.vsTargetMin)+' ahead of target'):('▼ '+durTxt(cc.vsTargetMin)+' behind target');
-    return '\n\n--- OVERALL ---\n'+kmDone+'km done · '+toGo+'km to go\nProj finish: '+projFinish+' ('+projDur+' vs tgt '+tgtDur+')\n'+vsT;
+    const ahead=cc.vsTargetMin<=0;
+    const vsT=(ahead?'✅ ▲ '+durTxt(-cc.vsTargetMin)+' ahead':'🔴 ▼ '+durTxt(cc.vsTargetMin)+' behind')+' of target';
+    return '<br><br>--- OVERALL ---<br>'+kmDone+'km done · '+toGo+'km to go<br>Proj finish: '+projFinish+' ('+projDur+' vs tgt '+tgtDur+')<br>'+vsT;
+  }
+
+  function wxLine(){
+    if(!WX.warnings.length&&WX.temp===null) return '';
+    const warns=WX.warnings.map(w=>warnBadge(w.code).icon+(warnBadge(w.code).text?' '+warnBadge(w.code).text:'')).join(' ');
+    const temp=WX.temp!==null?(WX.temp+'°C'+(WX.humid!==null?' '+WX.humid+'% RH':'')):'';
+    return '<br><br>⛅ Weather: '+(warns?warns+' · ':'')+temp;
   }
 
   function mapLink(){
     const routeMap='https://www.google.com/maps/d/viewer?mid=17KKPiqSM3PdpfHOTeC347SdbvtmKTa4';
     if(markerSnap&&markerSnap.lat&&markerSnap.lng){
       const pos='https://maps.google.com/?q='+markerSnap.lat.toFixed(5)+','+markerSnap.lng.toFixed(5);
-      return '\n\nPosition: '+pos+'\nOTW Route: '+routeMap;
+      return '<br><br>📍 Position: '+pos+'<br>🗺 OTW Route: '+routeMap;
     }
-    return '\n\nOTW Route: '+routeMap;
+    return '<br><br>🗺 OTW Route: '+routeMap;
   }
 
   function sendSMS(message){
@@ -739,7 +748,7 @@
     let sent=0, failed=0;
     emails.forEach(email=>{
       if(!email) return;
-      window.emailjs.send(svcId,tplId,{to_email:email,message:message.replace(/\n/g,'<br>'),subject:'Trailwalker 0565 Update'})
+      window.emailjs.send(svcId,tplId,{to_email:email,message:message,subject:'Trailwalker 0565 Update'})
       .then(r=>{ sent++;
         if(st) st.textContent='✓ Sent '+sent+'/'+(sent+failed)+' (status '+r.status+')';
         setTimeout(()=>{ if(st) st.textContent=''; },8000);
@@ -1174,7 +1183,7 @@
             if(cc.nextETA&&nextLeg){ etaTxt=' | ETA '+nextLeg.name+': '+cc.nextETA.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
             const aheadTxt=cc.vsTargetMin<=0?' | \u25b2 '+durTxt(-cc.vsTargetMin)+' ahead':' | \u25bc '+durTxt(cc.vsTargetMin)+' behind';
             const routeMap='https://www.google.com/maps/d/viewer?mid=17KKPiqSM3PdpfHOTeC347SdbvtmKTa4';
-            const posLink=arrivalSnap?'\n\nPosition: https://maps.google.com/?q='+arrivalSnap.lat.toFixed(5)+','+arrivalSnap.lng.toFixed(5)+'\nOTW Route: '+routeMap:'\n\nOTW Route: '+routeMap;
+            const posLink=arrivalSnap?'<br><br>📍 Position: https://maps.google.com/?q='+arrivalSnap.lat.toFixed(5)+','+arrivalSnap.lng.toFixed(5)+'<br>🗺 OTW Route: '+routeMap:'<br><br>🗺 OTW Route: '+routeMap;
             msg='\ud83c\udfc3 Team 0565 \u2014 Arrived '+l.name+' at '+arrTime
               +' | '+kmDone+'km done'
               +(spd?' | avg '+spd+' km/h':'')
