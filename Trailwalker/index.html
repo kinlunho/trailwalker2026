@@ -1471,7 +1471,7 @@
         const mvCol=mv==null?'':(mv<=l.walk?'color:var(--ahead)':'color:var(--behind)');
         const spdCol=spd==null?'':(tSpd&&spd>=tSpd?'color:var(--ahead)':'color:var(--behind)');
         let s='<span>moved <b style="'+mvCol+'">'+(mv!=null?shortDur(mv):'—')+'</b>'+(spd?' · <b style="'+spdCol+'">'+spd.toFixed(1)+' km/h</b>':'')+'</span>';
-        if(departed){ s+='<span class="rs">rest <b>'+shortDur((D(l.departure)-D(l.arrival))/MS)+'</b></span>'; }
+        if(departed){ const actRest=(D(l.departure)-D(l.arrival))/MS; const rCol=actRest<=l.brk?'var(--ahead)':'var(--behind)'; s+='<span style="color:'+rCol+'">rest <b>'+shortDur(actRest)+'</b></span>'; }
         splits='<div class="splits">'+s+'</div>';
         if(mv!=null){ const dP=mv-l.walk; let cmp='<span>vs plan <b class="'+(dP<=0?'cmpA':'cmpB')+'">'+signTxt(dP)+'</b></span>';
           if(l.t17>0){ const d7=mv-l.t17; cmp+='<span>vs ’17 <b class="'+(d7<=0?'cmpA':'cmpB')+'">'+signTxt(d7)+'</b></span>'; }
