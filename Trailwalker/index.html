@@ -1012,7 +1012,18 @@
     document.getElementById('profMeta').textContent=(Math.round(dispPosKm*10)/10)+' km · alt ~'+Math.round(eleAt(Math.max(0,Math.min(1,dispPosKm/(c.TOTAL||1)))))+'m · ↑'+ascDone.toLocaleString()+'/'+ascTot.toLocaleString()+'m';
     updateMap(c, dispPosKm);
     const rp=document.getElementById('reqpace');
-    rp.innerHTML= c.remKm<=0?'<small>done</small>':(c.reqPaceTarget<=0?'<span style="color:var(--behind)">over</span>':'≥'+kmhTxt(c.reqPaceTarget)+'<small> km/h</small>');
+    const rpLabel=rp.closest('.stat').querySelector('.k');
+    if(c.remKm<=0){
+      if(rpLabel) rpLabel.textContent='Need km/h · target';
+      rp.innerHTML='<small>done</small>';
+    } else if(c.reqPaceTarget>0){
+      if(rpLabel) rpLabel.textContent='Need km/h · target';
+      rp.innerHTML='≥'+kmhTxt(c.reqPaceTarget)+'<small> km/h</small>';
+    } else {
+      if(rpLabel) rpLabel.textContent='Need km/h · hold proj.';
+      const curSpd=isFinite(c.walkSpeed)&&c.walkSpeed>0?c.walkSpeed:(S.paceMin>0?60/S.paceMin:3.5);
+      rp.innerHTML='<span style="color:var(--behind)">≥'+kmhTxt(curSpd)+'<small> km/h</small></span>';
+    }
     const bufEl=document.getElementById('buffer');
     if(c.liveSectionWalk!=null){
       const idx=c.action==='arrive'?c.walkingIdx:c.restingIdx;
@@ -1056,7 +1067,10 @@
       }
       let splits='';
       if(arrived){ const pd=c.prevDep(i); const mv=pd?(D(l.arrival)-pd)/MS:null; const spd=(mv&&l.km>0)?l.km/(mv/60):null;
-        let s='<span class="mv">moved <b>'+(mv!=null?shortDur(mv):'—')+'</b>'+(spd?' · <b>'+spd.toFixed(1)+' km/h</b>':'')+'</span>';
+        const tSpd=l.walk>0?l.km/(l.walk/60):null;
+        const mvCol=mv==null?'':(mv<=l.walk?'color:var(--ahead)':'color:var(--behind)');
+        const spdCol=spd==null?'':(tSpd&&spd>=tSpd?'color:var(--ahead)':'color:var(--behind)');
+        let s='<span>moved <b style="'+mvCol+'">'+(mv!=null?shortDur(mv):'—')+'</b>'+(spd?' · <b style="'+spdCol+'">'+spd.toFixed(1)+' km/h</b>':'')+'</span>';
         if(departed){ s+='<span class="rs">rest <b>'+shortDur((D(l.departure)-D(l.arrival))/MS)+'</b></span>'; }
         splits='<div class="splits">'+s+'</div>';
         if(mv!=null){ const dP=mv-l.walk; let cmp='<span>vs plan <b class="'+(dP<=0?'cmpA':'cmpB')+'">'+signTxt(dP)+'</b></span>';
