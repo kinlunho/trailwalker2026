@@ -332,20 +332,43 @@
       <div id="gpxStatus" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
       <div id="gpxInfo" style="font-size:12px;color:var(--ahead);margin-top:4px"></div>
     </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:13px;font-weight:500;margin-bottom:6px">Route library</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Save routes with named checkpoints for re-use. Select a saved route to instantly load it.</div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+        <select id="routeLibrarySelect" style="flex:1;min-width:140px;font:inherit;font-size:12px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:5px 8px;color:var(--ink)">
+          <option value="">-- Select saved route --</option>
+        </select>
+        <button class="btn" id="routeLoadBtn">Load</button>
+        <button class="btn" id="routeDeleteBtn">Delete</button>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <input type="text" id="routeSaveName" placeholder="Route name e.g. Moontrekker 40 2024" style="flex:1;min-width:140px">
+        <button class="btn" id="routeSaveBtn">Save route</button>
+      </div>
+      <div id="routeLibStatus" style="font-size:12px;color:var(--lamp);margin-top:4px"></div>
+    </div>
     <div style="margin-bottom:14px" id="cpBuilderDiv">
       <div style="font-size:13px;font-weight:500;margin-bottom:6px">Define sections / checkpoints</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">After importing a GPX, tap the route map to place checkpoints. Each tap snaps to the trail and creates a section boundary. Or auto-split by km.</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Tap the route map to place checkpoints, auto-split by distance, or manually add by name and km.</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
-        <button class="btn" id="cpModeBtn">Tap map to add checkpoints</button>
-        <button class="btn" id="cpClearBtn">Clear</button>
+        <button class="btn" id="cpModeBtn">Tap map to add</button>
+        <button class="btn" id="cpClearBtn">Clear all</button>
         <button class="btn" id="cpBuildBtn">Build sections</button>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);flex-wrap:wrap;margin-bottom:4px">
-        <span>or split every</span>
-        <input type="number" id="cpSplitKm" placeholder="km" min="1" max="100" step="1" style="width:56px">
+      <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);flex-wrap:wrap;margin-bottom:8px">
+        <span>Auto-split every</span>
+        <input type="number" id="cpSplitKm" placeholder="km" min="1" max="100" step="1" style="width:52px">
         <span>km</span>
-        <button class="btn" id="cpSplitBtn">Auto-split</button>
+        <button class="btn" id="cpSplitBtn">Split</button>
       </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Or add checkpoint manually:</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+        <input type="text" id="cpManualName" placeholder="Checkpoint name" style="flex:1;min-width:100px;font-size:12px">
+        <input type="number" id="cpManualKm" placeholder="km" min="0" step="0.1" style="width:60px;font-size:12px">
+        <button class="btn" id="cpManualAdd">Add</button>
+      </div>
+      <div id="cpList" style="font-size:12px;color:var(--muted);margin-bottom:6px"></div>
       <div id="cpStatus" style="font-size:12px;color:var(--lamp);margin-top:4px"></div>
     </div>
     <div style="margin-bottom:14px">
@@ -641,11 +664,16 @@
     let projFinish, remBreak=0;
     if(action==='done'){ projFinish=D(S.legs[S.legs.length-1].arrival); }
     else{
-      let t=(action==='leave'?D(S.legs[restingIdx].arrival):now).getTime();
+      // anchor: if resting use NOW (rest time is passing), if walking use now too
+      // only use arrival time when building future sections after a completed rest
+      let t=now.getTime();
       S.legs.forEach((l,i)=>{
         if(l.arrival){
           projArr[i]=D(l.arrival);
+          // if departed, advance t to departure so next section starts correctly
           if(l.departure) t=D(l.departure).getTime();
+          // if arrived but not departed yet (currently resting), t stays as now
+          else if(i===restingIdx) t=now.getTime();
           return;
         }
         if(i===walkingIdx&&action==='arrive'){
@@ -656,13 +684,13 @@
           const planKmh=l.km/(l.walk/60);
           const liveKmh=markerSnap&&markerSnap.spd>0?markerSnap.spd:(walkSpeed>0?walkSpeed:planKmh);
           // only trust live speed once we have >1km and >15min of data
-          const trust=Math.min(1,Math.min(kmSoFar/2, elapsed/30)); // ramps from 0→1 over first 2km/30min
+          const trust=Math.min(1,Math.min(kmSoFar/2, elapsed/30));
           const blendedKmh=planKmh*(1-trust)+liveKmh*trust;
           const remSecKm=Math.max(0,l.km-kmSoFar);
           const remSecMin=blendedKmh>0?(remSecKm/blendedKmh*60):Math.max(0,l.walk-elapsed);
           t+=remSecMin*MS;
         } else {
-          // future section or resting: use section's own plan speed
+          // future section: use section's own plan walk time
           t+=l.walk*MS;
         }
         projArr[i]=new Date(t);
@@ -720,6 +748,7 @@
         window._cpList.push({frac:sf,km:sk}); window._cpList.sort((a,b)=>a.frac-b.frac);
         if(!window._cpMarkers) window._cpMarkers=[];
         window._cpMarkers.push(L.circleMarker(RT.route[bi],{radius:7,color:'#fff',weight:2,fillColor:'#f4b24a',fillOpacity:1}).addTo(_map).bindTooltip('CP '+sk+'km'));
+        renderCpList();
         const st=document.getElementById('cpStatus');
         if(st) st.textContent=window._cpList.length+' cp: '+window._cpList.map(c=>c.km+'km').join(' - ');
       });
@@ -801,6 +830,100 @@
     return '<br><br>❤️ Support Team '+(S.teamNum||'0565')+': <a href="'+S.donateUrl+'">Donate to Oxfam Trailwalker</a>';
   }
 
+  // ── ROUTE LIBRARY ──────────────────────────────────────────────────
+  const ROUTE_LIB_KEY='pacekit:routelib';
+  function rlLoad(){ try{ return JSON.parse(localStorage.getItem(ROUTE_LIB_KEY)||'{}'); }catch(e){ return {}; } }
+  function rlSave(lib){ try{ localStorage.setItem(ROUTE_LIB_KEY,JSON.stringify(lib)); }catch(e){} }
+  function rlPopulateSelect(){
+    const sel=document.getElementById('routeLibrarySelect'); if(!sel) return;
+    const lib=rlLoad(); const keys=Object.keys(lib).sort();
+    sel.innerHTML='<option value="">-- Select saved route --</option>'+keys.map(k=>'<option value="'+k+'">'+lib[k].name+'</option>').join('');
+  }
+  function rlSaveRoute(){
+    if(!_gpxData){ alert('Import a GPX file first'); return; }
+    const nameEl=document.getElementById('routeSaveName');
+    const name=(nameEl&&nameEl.value.trim())||('Route '+new Date().toLocaleDateString());
+    const key='route_'+Date.now();
+    const lib=rlLoad();
+    lib[key]={
+      name,
+      savedAt:new Date().toISOString(),
+      gpxRoute:{route:RT.route,frac:RT.frac,ele:RT.ele,ele_min:RT.ele_min,ele_max:RT.ele_max,total_km:RT.total_km,total_asc:RT.total_asc},
+      checkpoints:(window._cpList||[]).map(c=>({...c})),
+      cpNames:(window._cpNames||{}),
+      legs:S.legs.map(l=>({...l,arrival:null,departure:null}))
+    };
+    rlSave(lib); rlPopulateSelect();
+    const st=document.getElementById('routeLibStatus');
+    if(st) st.textContent='✓ Saved: '+name;
+    // also save to Firebase
+    if(SYNCED&&db){ try{ db.ref('routelib/'+key).set(lib[key]); }catch(e){} }
+  }
+  function rlLoadRoute(){
+    const sel=document.getElementById('routeLibrarySelect'); if(!sel||!sel.value) return;
+    const lib=rlLoad(); const entry=lib[sel.value]; if(!entry) return;
+    // restore route
+    const gd=entry.gpxRoute;
+    window.OTW_ROUTE={...gd,cp:[],sec_asc:[]};
+    Object.assign(RT,window.OTW_ROUTE);
+    _gpxData={...gd,pts:gd.route.map(p=>({lat:p[0],lon:p[1],ele:0})),
+      cumDist:gd.frac.map(f=>f*gd.total_km),totalKm:gd.total_km,wayptFracs:[]};
+    // restore checkpoints
+    window._cpList=entry.checkpoints||[];
+    window._cpNames=entry.cpNames||{};
+    window._cpMarkers=[];
+    // restore legs
+    if(entry.legs&&entry.legs.length){
+      S.legs=entry.legs.map(l=>({...l,arrival:null,departure:null}));
+      RT.cp=(window._cpList||[]).map((c,i)=>['S'+(i+1)+' ('+c.km+'km)',c.frac]);
+    }
+    // generate markers
+    const newMkrs=generateMarkersFromGPX(_gpxData);
+    MARKERS.length=0; newMkrs.forEach(m=>MARKERS.push(m));
+    if(_map){try{_map.remove();}catch(e){}} _map=null;
+    save(); render();
+    setTimeout(()=>{ initMap(); renderCpList(); },400);
+    const st=document.getElementById('routeLibStatus');
+    if(st) st.textContent='✓ Loaded: '+entry.name+' ('+S.legs.length+' sections)';
+  }
+  function rlDeleteRoute(){
+    const sel=document.getElementById('routeLibrarySelect'); if(!sel||!sel.value) return;
+    const lib=rlLoad(); const name=lib[sel.value]?.name||sel.value;
+    if(!confirm('Delete route "'+name+'"?')) return;
+    delete lib[sel.value]; rlSave(lib); rlPopulateSelect();
+    const st=document.getElementById('routeLibStatus');
+    if(st) st.textContent='Deleted: '+name;
+  }
+  function renderCpList(){
+    // Show editable list of current checkpoints
+    const el=document.getElementById('cpList'); if(!el) return;
+    if(!window._cpList||!window._cpList.length){ el.textContent='No checkpoints placed yet'; return; }
+    if(!window._cpNames) window._cpNames={};
+    el.innerHTML='<div style="margin-bottom:4px;font-weight:500">Checkpoints:</div>'+
+      window._cpList.map((c,i)=>{
+        const key='cp_'+i; const nm=(window._cpNames[key]||('Checkpoint '+(i+1))).replace(/"/g,'&quot;');
+        return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'+
+          '<span style="min-width:40px;color:var(--muted)">'+c.km+'km</span>'+
+          '<input type="text" value="'+nm+'" data-cpkey="'+key+'" style="flex:1;font-size:11px;padding:3px 6px" '+
+          'onchange="window._cpRename(this)">'+
+          '<button style="font-size:10px;padding:2px 6px;border:1px solid var(--line);border-radius:4px;background:var(--card);color:var(--ink);cursor:pointer" '+
+          'onclick="window._cpRemove('+i+')">x</button>'+
+          '</div>';
+      }).join('');
+  }
+  window._cpRename=function(inp){
+    if(!window._cpNames) window._cpNames={};
+    const key=inp.dataset.cpkey;
+    window._cpNames[key]=inp.value;
+    const ci=parseInt(key.replace('cp_',''));
+    if(S.legs[ci]) S.legs[ci].name=inp.value;
+    save(); render();
+  };
+  window._cpRemove=function(i){
+    window._cpList.splice(i,1);
+    renderCpList();
+  };
+  // ─────────────────────────────────────────────────────────────────
   // ── PHASE 2: GPX + NAISMITH + GPS ─────────────────────────────────
   function haversineKm(lat1,lon1,lat2,lon2){
     const R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
@@ -1710,9 +1833,17 @@
   document.getElementById('cpBuildBtn').onclick=()=>{
     if(!_gpxData||!window._cpList||!window._cpList.length){alert('Tap the map to place checkpoints first');return;}
     S.legs=buildLegsFromGPX(_gpxData,[...window._cpList.map(c=>c.frac),1.0]);
+    // apply checkpoint names to section legs
+    if(window._cpNames){
+      window._cpList.forEach((c,i)=>{
+        const nm=window._cpNames['cp_'+i];
+        if(nm&&S.legs[i]) S.legs[i].name=nm;
+      });
+    }
     save(); render();
+    renderCpList();
     const st=document.getElementById('cpStatus');
-    if(st) st.textContent='OK: '+S.legs.length+' sections with Naismith pacing';
+    if(st) st.textContent='Built '+S.legs.length+' sections with Naismith pacing';
     window._cpMode=false; document.getElementById('cpModeBtn').textContent='Tap map to add checkpoints';
   };
   document.getElementById('cpSplitBtn').onclick=()=>{
@@ -1727,6 +1858,43 @@
     if(st) st.textContent='OK: '+S.legs.length+' sections of ~'+km+'km';
   };
   document.getElementById('gpsAutoBtn').onclick=startGPSAutoTrack;
+
+  // Route library
+  rlPopulateSelect();
+  document.getElementById('routeSaveBtn').onclick=rlSaveRoute;
+  document.getElementById('routeLoadBtn').onclick=rlLoadRoute;
+  document.getElementById('routeDeleteBtn').onclick=rlDeleteRoute;
+
+  // Manual checkpoint add
+  document.getElementById('cpManualAdd').onclick=()=>{
+    if(!_gpxData&&!RT.route.length){ alert('Import a GPX first'); return; }
+    const nameEl=document.getElementById('cpManualName');
+    const kmEl=document.getElementById('cpManualKm');
+    const km=parseFloat(kmEl&&kmEl.value);
+    const name=(nameEl&&nameEl.value.trim())||('CP '+km+'km');
+    if(!km||km<=0){ alert('Enter a km value'); return; }
+    const total=RT.total_km||S.legs.reduce((a,l)=>a+l.km,0)||100;
+    const frac=km/total;
+    if(!window._cpList) window._cpList=[];
+    if(window._cpList.some(c=>Math.abs(c.frac-frac)<0.005)){ alert('Checkpoint already exists near '+km+'km'); return; }
+    window._cpList.push({frac,km}); window._cpList.sort((a,b)=>a.frac-b.frac);
+    if(!window._cpNames) window._cpNames={};
+    const idx=window._cpList.findIndex(c=>c.frac===frac);
+    window._cpNames['cp_'+idx]=name;
+    // also draw on map if available
+    if(_map&&_gpxData){
+      const bi=_gpxData.frac.findIndex(f=>f>=frac);
+      if(bi>=0&&RT.route[bi]){
+        if(!window._cpMarkers) window._cpMarkers=[];
+        window._cpMarkers.push(L.circleMarker(RT.route[bi],{radius:7,color:'#fff',weight:2,fillColor:'#f4b24a',fillOpacity:1}).addTo(_map).bindTooltip(name+' '+km+'km'));
+      }
+    }
+    if(nameEl) nameEl.value='';
+    if(kmEl) kmEl.value='';
+    renderCpList();
+    const st=document.getElementById('cpStatus');
+    if(st) st.textContent=window._cpList.length+' checkpoints: '+window._cpList.map(c=>c.km+'km').join(' - ');
+  };
   document.getElementById('donateUrl').oninput=e=>{ S.donateUrl=e.target.value.trim(); save(); };
   document.getElementById('ejsServiceId').oninput=e=>{ S.ejsServiceId=e.target.value.trim(); save(); saveEjsConfig(); };
   document.getElementById('ejsTemplateId').oninput=e=>{ S.ejsTemplateId=e.target.value.trim(); save(); saveEjsConfig(); };
