@@ -1021,7 +1021,8 @@
     document.getElementById('moving').textContent= (c.begun&&c.liveMoving>0)?durTxt(c.liveMoving):'—';
     document.getElementById('resting').textContent= c.liveRestTotal>0?durTxt(c.liveRestTotal):'—';
     const dispKm=markerSnap&&c.begun?markerSnap.km:c.kmDone;
-    document.getElementById('kmdone').innerHTML=(Math.round(dispKm*10)/10)+'<small>/'+Math.round(c.TOTAL)+' km</small>';
+    const toGo=Math.round((c.TOTAL-dispKm)*10)/10;
+    document.getElementById('kmdone').innerHTML=(Math.round(dispKm*10)/10)+'<small>/'+Math.round(c.TOTAL)+' km · '+toGo+'km</small>';
     document.getElementById('profile').innerHTML=buildProfile(c);
     const ascDone=S.legs.reduce((s,l)=>s+(l.arrival?(l.asc||0):0),0);
     const ascTot=S.legs.reduce((s,l)=>s+(l.asc||0),0);
