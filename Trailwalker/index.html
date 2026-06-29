@@ -245,7 +245,7 @@
 </svg>
 
 <div class="wrap">
-  <div class="masthead"><h1>Oxfam <b>Trailwalker</b> 100</h1><div class="sub">20–22 Nov 2026</div></div>
+  <div class="masthead"><h1 id="raceTitle">Oxfam <b>Trailwalker</b> 100</h1><div class="sub" id="raceDates">20–22 Nov 2026</div></div>
   <div class="syncbar" id="syncbar"></div>
 
   <div class="hero">
@@ -316,6 +316,12 @@
     <button class="btn ghost" id="editToggle">Target & plan</button></div>
 
   <div class="panel" id="panel">
+    <div class="tp">
+      <h3>Race info</h3>
+      <div class="field"><label for="raceNameInput">Race name</label><input type="text" id="raceNameInput" placeholder="e.g. Moontrekker 40" style="width:180px;text-align:left"></div>
+      <div class="field"><label for="raceKmInput">Distance (km)</label><input type="number" id="raceKmInput" placeholder="40" min="1" step="0.1" style="width:80px"></div>
+      <div class="field"><label for="raceYearInput">Year</label><input type="number" id="raceYearInput" placeholder="2026" min="2024" step="1" style="width:80px"></div>
+    </div>
     <div class="tp">
       <h3>Your target & pace</h3>
       <div class="field"><label for="targetInput">Target finish (hours)</label><input type="number" id="targetInput" min="1" step="0.5"></div>
@@ -517,7 +523,7 @@
   function defaultStart(){ return new Date(2026,10,20,9,0,0,0).toISOString(); }
   function fresh(){ const legs=DEFAULT_LEGS.map(l=>({...l, arrival:null, departure:null}));
     applyPace(legs,DEF_PACE); markFinish(legs);
-    return {startPlanned:defaultStart(), startActual:null, cutoffH:48, targetH:DEF_TARGET, paceMin:DEF_PACE, legs}; }
+    return {startPlanned:defaultStart(), startActual:null, cutoffH:48, targetH:DEF_TARGET, paceMin:DEF_PACE, raceName:'', raceKm:0, raceYear:new Date().getFullYear(), legs}; }
 
   async function load(){
     initFirebase();
@@ -563,7 +569,7 @@
     markFinish(S.legs);
     if(!S.startPlanned)S.startPlanned=defaultStart();
     if(!S.cutoffH)S.cutoffH=48; if(!S.targetH)S.targetH=DEF_TARGET; if(!S.paceMin)S.paceMin=DEF_PACE;
-    if(!S.teamNum)S.teamNum='0565'; if(S.donateUrl===undefined)S.donateUrl='https://event.oxfamtrailwalker.org.hk/en/Donation/Sponsorship?tId=r1tQWNW__bA%3D';
+    if(!S.teamNum)S.teamNum='0565'; if(S.raceName===undefined)S.raceName=''; if(!S.raceKm)S.raceKm=0; if(!S.raceYear)S.raceYear=new Date().getFullYear(); if(S.donateUrl===undefined)S.donateUrl='https://event.oxfamtrailwalker.org.hk/en/Donation/Sponsorship?tId=r1tQWNW__bA%3D';
   }
   async function saveOld(){}
 
@@ -899,6 +905,7 @@
     if(_map){try{_map.remove();}catch(e){}} _map=null;
     save(); render();
     setTimeout(()=>{ initMap(); renderCpList(); },400);
+    if(entry.raceName!==undefined){S.raceName=entry.raceName;S.raceKm=entry.raceKm||0;S.raceYear=entry.raceYear||new Date().getFullYear();}
     window._rlCurrentKey=sel.value; // track for auto-save
     const nameEl=document.getElementById('routeSaveName');
     if(nameEl) nameEl.value=entry.name;
@@ -1765,6 +1772,20 @@
     try{ const c=JSON.parse(localStorage.getItem('tw2026:emailjs')||'null');
       if(c&&c.svc){ if(!S.ejsServiceId)S.ejsServiceId=c.svc; if(!S.ejsTemplateId)S.ejsTemplateId=c.tpl||''; if(!S.ejsPublicKey)S.ejsPublicKey=c.key||''; if(c.nums&&!S.smsNumbers.length)S.smsNumbers=c.nums; }
     }catch(e){}
+    // dynamic title + dates
+    const _rt=document.getElementById('raceTitle');
+    if(_rt){ const nm=S.raceName||'Trail Race'; const km=S.raceKm||Math.round(S.legs.reduce((a,l)=>a+l.km,0));
+      const parts=nm.trim().split(' '); const first=parts[0]; const rest=parts.slice(1).join(' ');
+      _rt.innerHTML=first+(rest?' <b>'+rest+'</b>':'')+(km?' '+km:''); }
+    const _rd=document.getElementById('raceDates');
+    if(_rd){ const st2=D(S.startPlanned)||D(S.startActual);
+      if(st2){ const en=new Date(st2.getTime()+S.targetH*3600000);
+        const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const fd=d=>d.getDate()+' '+mo[d.getMonth()];
+        _rd.textContent=(st2.getDate()===en.getDate()?fd(st2):fd(st2)+'–'+fd(en))+' '+(S.raceYear||st2.getFullYear()); } }
+    const eRN=document.getElementById('raceNameInput'); if(eRN&&!eRN.matches(':focus'))eRN.value=S.raceName||'';
+    const eRK=document.getElementById('raceKmInput'); if(eRK&&!eRK.matches(':focus'))eRK.value=S.raceKm||'';
+    const eRY=document.getElementById('raceYearInput'); if(eRY&&!eRY.matches(':focus'))eRY.value=S.raceYear||new Date().getFullYear();
     const eTNum=document.getElementById('teamNum'); if(eTNum&&!eTNum.matches(':focus'))eTNum.value=S.teamNum||'0565';
     const eDon=document.getElementById('donateUrl'); if(eDon&&!eDon.matches(':focus'))eDon.value=S.donateUrl||'';
     const eSvc=document.getElementById('ejsServiceId'); if(eSvc&&!eSvc.matches(':focus'))eSvc.value=S.ejsServiceId||'';
@@ -1920,6 +1941,9 @@
   // ─────────────────────────────────────────────────────────────
 
   document.getElementById('teamNum').oninput=e=>{ S.teamNum=e.target.value.trim()||'0565'; save(); };
+  document.getElementById('raceNameInput').oninput=e=>{ S.raceName=e.target.value; save(); render(); };
+  document.getElementById('raceKmInput').oninput=e=>{ S.raceKm=parseFloat(e.target.value)||0; save(); render(); };
+  document.getElementById('raceYearInput').oninput=e=>{ S.raceYear=parseInt(e.target.value)||new Date().getFullYear(); save(); render(); };
 
   document.getElementById('gpxFile').onchange=e=>{
     const file=e.target.files[0]; if(!file) return;
