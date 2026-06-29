@@ -1020,9 +1020,12 @@
       if(rpLabel) rpLabel.textContent='Need km/h · target';
       rp.innerHTML='≥'+kmhTxt(c.reqPaceTarget)+'<small> km/h</small>';
     } else {
-      if(rpLabel) rpLabel.textContent='Need km/h · hold proj.';
-      const curSpd=isFinite(c.walkSpeed)&&c.walkSpeed>0?c.walkSpeed:(S.paceMin>0?60/S.paceMin:3.5);
-      rp.innerHTML='<span style="color:var(--behind)">≥'+kmhTxt(curSpd)+'<small> km/h</small></span>';
+      if(rpLabel) rpLabel.textContent='Need km/h · proj.';
+      // pace needed to hold current projected finish = remKm / remWalkTime at current speed
+      // walkSpeed is in km/h, convert to min/km for kmhTxt
+      const curKmh=isFinite(c.walkSpeed)&&c.walkSpeed>0?c.walkSpeed:(S.paceMin>0?60/S.paceMin:3.5);
+      const curMinPerKm=60/curKmh; // this is what kmhTxt expects
+      rp.innerHTML='<span style="color:var(--behind)">≥'+kmhTxt(curMinPerKm)+'<small> km/h</small></span>';
     }
     const bufEl=document.getElementById('buffer');
     if(c.liveSectionWalk!=null){
