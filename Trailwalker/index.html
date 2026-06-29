@@ -586,27 +586,30 @@
     let projFinish, remBreak=0;
     if(action==='done'){ projFinish=D(S.legs[S.legs.length-1].arrival); }
     else{
-      let remWalk=0;
-      S.legs.forEach((l,i)=>{ if(!l.arrival)remWalk+=l.walk; if(!l.finish&&!l.arrival&&i!==restingIdx)remBreak+=l.brk; });
-      if(action==='leave') remBreak+=S.legs[restingIdx].brk; // add current rest
-      // anchor: if walking use now, if resting use departure time of current section
-      const anc=action==='leave'?D(S.legs[restingIdx].arrival):now;
-      projFinish=new Date(anc.getTime()+(remWalk*ratio+remBreak)*MS);
-    }
-    // now fill in projArr using ratio and projFinish anchor
-    { let ancT=(action==='leave'?D(S.legs[restingIdx].arrival):now).getTime();
-      let cumW=0,cumB=0;
+      // anchor = now if walking, arrival time if resting (still in rest period)
+      const ancT=(action==='leave'?D(S.legs[restingIdx].arrival):now).getTime();
+      // build projArr and projFinish from same loop to guarantee consistency
+      let t=ancT;
       S.legs.forEach((l,i)=>{
-        if(l.arrival){ projArr[i]=D(l.arrival); ancT=l.departure?D(l.departure).getTime():ancT; cumW=0; cumB=0; return; }
-        cumW+=l.walk*ratio;
-        projArr[i]=new Date(ancT+cumW*MS+cumB*MS);
-        cumB+=(l.finish?0:l.brk);
+        if(l.arrival){
+          projArr[i]=D(l.arrival);
+          // if departed, advance t to departure so next section starts correctly
+          if(l.departure) t=D(l.departure).getTime();
+          return;
+        }
+        // future section: add walk time (scaled by ratio) then rest
+        t+=l.walk*ratio*MS;
+        projArr[i]=new Date(t);
+        if(!l.finish) t+=l.brk*MS;
       });
+      projFinish=projArr[S.legs.length-1];
     }
     const vsTargetMin=begun?(projFinish-targetFinish)/MS:0;
     const bufferCutMin=(cutoff-projFinish)/MS;
     const minsToTarget=(targetFinish-now)/MS;
-    const reqPaceTarget= remKm>0 ? (minsToTarget-remBreak)/remKm : Infinity;
+    const remBreakMins=S.legs.reduce((a,l,i)=>a+(!l.arrival&&!l.finish?l.brk:0),0)
+      +(action==='leave'?S.legs[restingIdx].brk:0);
+    const reqPaceTarget= remKm>0 ? (minsToTarget-remBreakMins)/remKm : Infinity;
     const cutWin=S.cutoffH*60;
     const projPct=Math.max(0,Math.min(100,((projFinish-base)/MS)/cutWin*100));
     const tgtPct=Math.max(0,Math.min(100,(S.targetH*60)/cutWin*100));
