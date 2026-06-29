@@ -890,10 +890,16 @@
 
     // colour walking speed stat
     const speedEl=document.getElementById('speed');
-    const tgtSpd2=S.paceMin>0?60/S.paceMin:3.8;
     const liveSpd=markerSnap&&c.begun?markerSnap.spd:null;
     const dispSpd=liveSpd||c.walkSpeed;
-    const spdCls=isFinite(dispSpd)?(dispSpd>=tgtSpd2?'spd-ok':dispSpd>=tgtSpd2-0.3?'spd-warn':'spd-slow'):'';
+    // compare against plan pace (target speed per section)
+    const planKmh=S.paceMin>0?60/S.paceMin:3.8;
+    const spdCls=isFinite(dispSpd)
+      ?(dispSpd>planKmh+0.1?'spd-ok'    // green: above plan
+      :dispSpd>=planKmh-0.1?''          // white: on par
+      :dispSpd>=planKmh-0.4?'spd-warn'  // amber: slightly under
+      :'spd-slow')                       // red: clearly under
+      :'';
     speedEl.className=spdCls;
         const netaEl=document.getElementById('nexteta');
     const mketaEl=document.getElementById('markereta');
