@@ -1366,7 +1366,8 @@
   function updateSyncbar(){
     const sb=document.getElementById('syncbar'); if(!sb) return;
     let cls,html;
-    const donateBtn=S&&S.donateUrl?'<a href="'+S.donateUrl+'" target="_blank" style="margin-left:auto;color:#f4a300;font-size:11px;font-weight:600;text-decoration:none;border:1px solid #f4a300;border-radius:10px;padding:1px 8px;flex-shrink:0">Donate</a>':'';
+    const donateUrl=(S&&S.donateUrl)||'https://event.oxfamtrailwalker.org.hk/en/Donation/Sponsorship?tId=r1tQWNW__bA%3D';
+    const donateBtn='<a href="'+donateUrl+'" target="_blank" style="margin-left:auto;color:#f4a300;font-size:11px;font-weight:600;text-decoration:none;border:1px solid #f4a300;border-radius:10px;padding:1px 8px;flex-shrink:0">Donate</a>';
     if(READONLY){
       cls='watch';
       html='<span class="dot"></span><span class="msg">Watching race <b>'+RACE+'</b> · '+(SYNCED?'live, read-only':'<span style="color:var(--behind)">can’t connect — check the link</span>')+'</span>'+donateBtn;
