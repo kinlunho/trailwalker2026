@@ -705,7 +705,7 @@
     const projDur=cc.projFinish?durTxt((cc.projFinish-new Date(S.startActual))/60000):'—';
     const tgtDur=durTxt(S.targetH*60);
     const vsT=cc.vsTargetMin<=0?('▲ '+durTxt(-cc.vsTargetMin)+' ahead of target'):('▼ '+durTxt(cc.vsTargetMin)+' behind target');
-    return '\n\nOverall: '+kmDone+'/'+total+'km | Proj finish: '+projFinish+' ('+projDur+' vs tgt '+tgtDur+') | '+vsT;
+    return '\n\n--- OVERALL ---\n'+kmDone+'km done · '+toGo+'km to go\nProj finish: '+projFinish+' ('+projDur+' vs tgt '+tgtDur+')\n'+vsT;
   }
 
   function mapLink(){
@@ -739,7 +739,7 @@
     let sent=0, failed=0;
     emails.forEach(email=>{
       if(!email) return;
-      window.emailjs.send(svcId,tplId,{to_email:email,message:message,subject:'Trailwalker 2026 Update'})
+      window.emailjs.send(svcId,tplId,{to_email:email,message:message,subject:'Trailwalker 0565 Update'})
       .then(r=>{ sent++;
         if(st) st.textContent='✓ Sent '+sent+'/'+(sent+failed)+' (status '+r.status+')';
         setTimeout(()=>{ if(st) st.textContent=''; },8000);
