@@ -947,6 +947,7 @@
               if(cc.nextETA){ msg+=' | ETA: '+cc.nextETA.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
             }
             msg+=overallLine(cc);
+            msg+=wxLine();
             msg+=mapLink();
             sendSMS(msg);
           } catch(e){ sendSMS('\ud83c\udfc1 Team 0565 \u2014 We have started! Good luck team!'); }
@@ -1191,6 +1192,7 @@
               +aheadTxt
               +' of target'
               +overallLine(cc)
+              +wxLine()
               +posLink;
           } catch(e){ msg='\ud83c\udfc3 Team 0565 \u2014 Arrived '+l.name+' at '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
           sendSMS(msg);
