@@ -664,16 +664,20 @@
     let projFinish, remBreak=0;
     if(action==='done'){ projFinish=D(S.legs[S.legs.length-1].arrival); }
     else{
-      // anchor: if resting use NOW (rest time is passing), if walking use now too
-      // only use arrival time when building future sections after a completed rest
-      let t=now.getTime();
+      // Build projection purely from actuals + plan
+      // t starts from base; completed sections advance t to actual departure
+      // current section uses now; future sections use plan
+      let t=base.getTime();
       S.legs.forEach((l,i)=>{
         if(l.arrival){
           projArr[i]=D(l.arrival);
-          // if departed, advance t to departure so next section starts correctly
-          if(l.departure) t=D(l.departure).getTime();
-          // if arrived but not departed yet (currently resting), t stays as now
-          else if(i===restingIdx) t=now.getTime();
+          if(l.departure){
+            // fully completed: use actual departure time
+            t=D(l.departure).getTime();
+          } else {
+            // arrived but still resting: anchor is now (rest time is passing)
+            t=now.getTime();
+          }
           return;
         }
         if(i===walkingIdx&&action==='arrive'){
@@ -698,7 +702,7 @@
       });
       projFinish=projArr[S.legs.length-1];
     }
-    const vsTargetMin=begun?(projFinish-plFinish)/MS:0;
+    const vsTargetMin=begun?(projFinish-targetFinish)/MS:0;
     const bufferCutMin=(cutoff-projFinish)/MS;
     const minsToTarget=(targetFinish-now)/MS;
     const remBreakMins=S.legs.reduce((a,l)=>a+(!l.arrival&&!l.finish?l.brk:0),0)
