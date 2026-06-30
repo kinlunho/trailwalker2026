@@ -382,6 +382,19 @@
       <div class="field"><label for="raceNameInput">Race name</label><input type="text" id="raceNameInput" placeholder="e.g. Moontrekker 40" style="width:180px;text-align:left"></div>
       <div class="field"><label for="raceKmInput">Distance (km)</label><input type="number" id="raceKmInput" placeholder="40" min="1" step="0.1" style="width:80px"></div>
       <div class="field"><label for="raceYearInput">Year</label><input type="number" id="raceYearInput" placeholder="2026" min="2024" step="1" style="width:80px"></div>
+      <div class="field"><label for="raceRegionInput">Region</label>
+        <select id="raceRegionInput" style="width:140px;text-align:left;font:inherit;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 8px;color:var(--ink)">
+          <option value="">-- Select --</option>
+          <option value="Asia">Asia</option>
+          <option value="Europe">Europe</option>
+          <option value="North America">North America</option>
+          <option value="South America">South America</option>
+          <option value="Africa">Africa</option>
+          <option value="Oceania">Oceania</option>
+        </select>
+      </div>
+      <div class="field"><label for="raceCountryInput">Country</label><input type="text" id="raceCountryInput" placeholder="e.g. Hong Kong" style="width:140px;text-align:left"></div>
+      <div style="font-size:11px;color:var(--faint);margin-top:-2px">Used to organize the route library by region and country. A searchable public race library is coming in a future update.</div>
     </div>
     <div class="tp">
       <h3>Your target & pace</h3>
@@ -636,7 +649,7 @@
   function defaultStart(){ return new Date(2026,10,20,9,0,0,0).toISOString(); }
   function fresh(){ const legs=DEFAULT_LEGS.map(l=>({...l, arrival:null, departure:null}));
     applyPace(legs,DEF_PACE); markFinish(legs);
-    return {startPlanned:defaultStart(), startActual:null, cutoffH:48, targetH:DEF_TARGET, paceMin:DEF_PACE, raceName:'', raceKm:0, raceYear:new Date().getFullYear(), teamNum:'0565', donateUrl:'https://event.oxfamtrailwalker.org.hk/en/Donation/Sponsorship?tId=r1tQWNW__bA%3D', ejsServiceId:'', ejsTemplateId:'', ejsPublicKey:'', smsNumbers:[], climbAdj:0, descAdj:0, heatOn:false, heatPeak:8, defaultRest:10, supportRestBonus:15, legs}; }
+    return {startPlanned:defaultStart(), startActual:null, cutoffH:48, targetH:DEF_TARGET, paceMin:DEF_PACE, raceName:'', raceKm:0, raceYear:new Date().getFullYear(), raceRegion:'', raceCountry:'', teamNum:'0565', donateUrl:'https://event.oxfamtrailwalker.org.hk/en/Donation/Sponsorship?tId=r1tQWNW__bA%3D', ejsServiceId:'', ejsTemplateId:'', ejsPublicKey:'', smsNumbers:[], climbAdj:0, descAdj:0, heatOn:false, heatPeak:8, defaultRest:10, supportRestBonus:15, legs}; }
 
   async function load(){
     initFirebase();
@@ -682,7 +695,7 @@
     markFinish(S.legs);
     if(!S.startPlanned)S.startPlanned=defaultStart();
     if(!S.cutoffH)S.cutoffH=48; if(!S.targetH)S.targetH=DEF_TARGET; if(!S.paceMin)S.paceMin=DEF_PACE;
-    if(!S.teamNum)S.teamNum='0565'; if(S.raceName===undefined)S.raceName=''; if(!S.raceKm)S.raceKm=0; if(!S.raceYear)S.raceYear=new Date().getFullYear(); if(S.climbAdj===undefined)S.climbAdj=0; if(S.descAdj===undefined)S.descAdj=0; if(S.heatOn===undefined)S.heatOn=false; if(!S.heatPeak)S.heatPeak=8; if(S.defaultRest===undefined)S.defaultRest=10; if(S.supportRestBonus===undefined)S.supportRestBonus=15; if(S.donateUrl===undefined)S.donateUrl='https://event.oxfamtrailwalker.org.hk/en/Donation/Sponsorship?tId=r1tQWNW__bA%3D';
+    if(!S.teamNum)S.teamNum='0565'; if(S.raceName===undefined)S.raceName=''; if(!S.raceKm)S.raceKm=0; if(!S.raceYear)S.raceYear=new Date().getFullYear(); if(S.raceRegion===undefined)S.raceRegion=''; if(S.raceCountry===undefined)S.raceCountry=''; if(S.climbAdj===undefined)S.climbAdj=0; if(S.descAdj===undefined)S.descAdj=0; if(S.heatOn===undefined)S.heatOn=false; if(!S.heatPeak)S.heatPeak=8; if(S.defaultRest===undefined)S.defaultRest=10; if(S.supportRestBonus===undefined)S.supportRestBonus=15; if(S.donateUrl===undefined)S.donateUrl='https://event.oxfamtrailwalker.org.hk/en/Donation/Sponsorship?tId=r1tQWNW__bA%3D';
   }
   async function saveOld(){}
 
@@ -960,8 +973,23 @@
   function rlSave(lib){ try{ localStorage.setItem(ROUTE_LIB_KEY,JSON.stringify(lib)); }catch(e){} }
   function rlPopulateSelect(){
     const sel=document.getElementById('routeLibrarySelect'); if(!sel) return;
-    const lib=rlLoad(); const keys=Object.keys(lib).sort();
-    sel.innerHTML='<option value="">-- Select saved route --</option>'+keys.map(k=>'<option value="'+k+'">'+lib[k].name+'</option>').join('');
+    const lib=rlLoad(); const keys=Object.keys(lib);
+    // group by region -> country, sort alphabetically within each group
+    const groups={};
+    keys.forEach(k=>{
+      const r=lib[k].raceRegion||'Other';
+      const c=lib[k].raceCountry||'Unspecified';
+      const groupKey=r+' \u2014 '+c;
+      if(!groups[groupKey]) groups[groupKey]=[];
+      groups[groupKey].push(k);
+    });
+    const groupNames=Object.keys(groups).sort();
+    let html='<option value="">-- Select saved route --</option>';
+    groupNames.forEach(g=>{
+      const sortedKeys=groups[g].sort((a,b)=>(lib[a].name||'').localeCompare(lib[b].name||''));
+      html+='<optgroup label="'+g+'">'+sortedKeys.map(k=>'<option value="'+k+'">'+lib[k].name+'</option>').join('')+'</optgroup>';
+    });
+    sel.innerHTML=html;
   }
   function rlSaveRoute(autoKey){
     const nameEl=document.getElementById('routeSaveName');
@@ -977,6 +1005,7 @@
       savedAt:new Date().toISOString(),
       gpxRoute,
       raceName:S.raceName||'',raceKm:S.raceKm||0,raceYear:S.raceYear||new Date().getFullYear(),
+      raceRegion:S.raceRegion||'',raceCountry:S.raceCountry||'',
       checkpoints:(window._cpList||[]).map(c=>({...c})),
       cpNames:(window._cpNames||{}),
       legs:S.legs.map(l=>({...l,arrival:null,departure:null}))
@@ -1018,7 +1047,7 @@
     if(_map){try{_map.remove();}catch(e){}} _map=null;
     save(); render();
     setTimeout(()=>{ initMap(); renderCpList(); },400);
-    if(entry.raceName!==undefined){S.raceName=entry.raceName;S.raceKm=entry.raceKm||0;S.raceYear=entry.raceYear||new Date().getFullYear();}
+    if(entry.raceName!==undefined){S.raceName=entry.raceName;S.raceKm=entry.raceKm||0;S.raceYear=entry.raceYear||new Date().getFullYear();S.raceRegion=entry.raceRegion||'';S.raceCountry=entry.raceCountry||'';}
     window._rlCurrentKey=sel.value; // track for auto-save
     const nameEl=document.getElementById('routeSaveName');
     if(nameEl) nameEl.value=entry.name;
@@ -2186,6 +2215,8 @@
     const eRN=document.getElementById('raceNameInput'); if(eRN&&!eRN.matches(':focus'))eRN.value=S.raceName||'';
     const eRK=document.getElementById('raceKmInput'); if(eRK&&!eRK.matches(':focus'))eRK.value=S.raceKm||'';
     const eRY=document.getElementById('raceYearInput'); if(eRY&&!eRY.matches(':focus'))eRY.value=S.raceYear||new Date().getFullYear();
+    const eRR=document.getElementById('raceRegionInput'); if(eRR&&!eRR.matches(':focus'))eRR.value=S.raceRegion||'';
+    const eRC=document.getElementById('raceCountryInput'); if(eRC&&!eRC.matches(':focus'))eRC.value=S.raceCountry||'';
     const eTNum=document.getElementById('teamNum'); if(eTNum&&!eTNum.matches(':focus'))eTNum.value=S.teamNum||'0565';
     const eDon=document.getElementById('donateUrl'); if(eDon&&!eDon.matches(':focus'))eDon.value=S.donateUrl||'';
     const eSvc=document.getElementById('ejsServiceId'); if(eSvc&&!eSvc.matches(':focus'))eSvc.value=S.ejsServiceId||'';
@@ -2427,6 +2458,8 @@
   document.getElementById('raceNameInput').oninput=e=>{ S.raceName=e.target.value; save(); render(); };
   document.getElementById('raceKmInput').oninput=e=>{ S.raceKm=parseFloat(e.target.value)||0; save(); render(); };
   document.getElementById('raceYearInput').oninput=e=>{ S.raceYear=parseInt(e.target.value)||new Date().getFullYear(); save(); render(); };
+  document.getElementById('raceRegionInput').onchange=e=>{ S.raceRegion=e.target.value; save(); };
+  document.getElementById('raceCountryInput').oninput=e=>{ S.raceCountry=e.target.value; save(); };
 
   document.getElementById('gpxFile').onchange=e=>{
     const file=e.target.files[0]; if(!file) return;
