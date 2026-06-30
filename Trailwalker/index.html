@@ -351,8 +351,8 @@
   <div class="seg-h"><span class="t">Route map</span><span style="display:flex;gap:8px"><button class="btn ghost" id="mapToggle">Hide map</button><button class="btn ghost" id="gpsBtn">Show my GPS</button></span></div>
   <div class="mapwrap"><div id="map"></div></div>
 
-  <div class="seg-h" id="elevHeaderRow" style="cursor:pointer" title="Tap for current section elevation"><span class="t">Route & elevation</span><span class="profmeta" id="profMeta"></span></div>
-  <div class="profwrap">
+  <div class="seg-h"><span class="t">Route & elevation</span><span class="profmeta" id="profMeta"></span></div>
+  <div class="profwrap" id="profwrap" style="cursor:pointer" title="Tap for current section elevation">
     <div id="profile"></div>
     <div class="proflegend">
       <span><i style="background:#5fb98f"></i>completed</span>
@@ -496,10 +496,14 @@
     <textarea id="smsNumbers" rows="3" style="width:100%;margin-top:6px;background:var(--card);border:1px solid var(--line);border-radius:8px;color:var(--ink);font:inherit;font-size:13px;padding:8px;color-scheme:dark;resize:vertical" placeholder="supporter1@gmail.com&#10;supporter2@gmail.com"></textarea>
     <button class="btn" id="testSmsBtn" style="margin-top:6px">Send test email</button>
     <div id="smsStatus" style="font-size:12px;color:var(--muted);margin-top:4px"></div>
-    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+    <h3 style="margin-top:18px;color:var(--behind)">Danger zone</h3>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">These actions affect live race data. Use with care.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn danger" id="resetRaceTimesBtn">⟲ Reset race times (keeps your plan)</button>
       <button class="btn danger" id="resetBtn">Reset everything (plan + race) to defaults</button>
       <button class="btn" id="archiveBtn">📦 Archive this race</button>
     </div>
+    <div id="resetRaceStatus" style="font-size:12px;color:var(--muted);margin-top:4px"></div>
     <div id="archiveStatus" style="font-size:12px;color:var(--muted);margin-top:4px"></div>
     </div>
   </div>
@@ -1449,12 +1453,25 @@
     const showMarker=(curF>f0-0.0005&&curF<f1+0.0005&&c.begun);
 
     const svg=document.getElementById('sectionElevSvg');
-    svg.setAttribute('viewBox','0 0 '+W+' '+(H+20));
-    svg.innerHTML='<path d="'+path+'" fill="var(--lamp)" opacity="0.25"/>'+
+    svg.setAttribute('viewBox','0 0 '+W+' '+(H+22));
+    const yTicks=[emin,emin+rng*0.5,emax];
+    const yGridLines=yTicks.map(v=>{
+      const y=H-((v-emin)/rng)*H;
+      return '<line x1="0" y1="'+y+'" x2="'+W+'" y2="'+y+'" stroke="var(--line)" stroke-width="0.5"/>'+
+        '<text x="2" y="'+(y-2)+'" font-size="8" fill="var(--faint)">'+Math.round(v)+'m</text>';
+    }).join('');
+    const distKm=Math.round((secEndKm-secStartKm)*10)/10;
+    const xTicks=[0,distKm/2,distKm];
+    const xLabels=xTicks.map((v,idx)=>{
+      const x=(idx/2)*W;
+      const anchor=idx===0?'start':idx===2?'end':'middle';
+      return '<text x="'+x+'" y="'+(H+15)+'" font-size="8" fill="var(--faint)" text-anchor="'+anchor+'">'+(Math.round(v*10)/10)+'km</text>';
+    }).join('');
+    svg.innerHTML=yGridLines+
+      '<path d="'+path+'" fill="var(--lamp)" opacity="0.25"/>'+
       '<path d="'+path.replace(' Z','')+'" fill="none" stroke="var(--lamp)" stroke-width="2"/>'+
       (showMarker?'<line x1="'+curX+'" y1="0" x2="'+curX+'" y2="'+H+'" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="3,3"/><circle cx="'+curX+'" cy="'+curY+'" r="4" fill="var(--ink)"/>':'')+
-      '<text x="2" y="'+H+14+'" font-size="9" fill="var(--faint)">'+Math.round(emin)+'m</text>'+
-      '<text x="'+(W-2)+'" y="'+(H+14)+'" font-size="9" fill="var(--faint)" text-anchor="end">'+Math.round(emax)+'m</text>';
+      xLabels;
 
     document.getElementById('sectionElevTitle').textContent=leg.name;
     document.getElementById('sectionElevLegend').innerHTML=
@@ -1739,13 +1756,7 @@
     } else {
       st.innerHTML='';
     }
-    if(c.begun && !READONLY){
-      const rb=document.createElement('button'); rb.className='resetrace'; rb.textContent='⟲ Reset race';
-      rb.onclick=()=>{ if(rb.dataset.armed){ resetRace(); return; }
-        rb.dataset.armed='1'; rb.textContent='⟲ Tap again to reset — keeps your plan'; rb.classList.add('armed');
-        setTimeout(()=>{ if(rb&&rb.isConnected){ rb.dataset.armed=''; rb.textContent='⟲ Reset race'; rb.classList.remove('armed'); } },3500); };
-      sw.appendChild(rb);
-    }
+
 
     const bar=document.getElementById('bar');
     const wi2=c.action==='arrive'?c.walkingIdx:(c.action==='leave'?c.restingIdx:-1);
@@ -2308,7 +2319,7 @@
   // ─────────────────────────────────────────────────────────────
 
   document.getElementById('teamNum').oninput=e=>{ S.teamNum=e.target.value.trim()||'0565'; save(); };
-  const _elevHeader=document.getElementById('elevHeaderRow');
+  const _elevHeader=document.getElementById('profwrap');
   if(_elevHeader) _elevHeader.addEventListener('click',showSectionElevPopup);
 
   function reapplyClimbDescHeat(){
@@ -2494,7 +2505,16 @@
   const _alb=document.getElementById('addLegBtn'); if(_alb) _alb.onclick=()=>{ const n={name:'New section',route:'',km:5,d:2,sup:false,brk:S.defaultRest!==undefined?S.defaultRest:10,baseBrk:S.defaultRest!==undefined?S.defaultRest:10,asc:0,arrival:null,departure:null};
     n.walk=paceWalk(S.legs,n,S.paceMin); S.legs.splice(S.legs.length-1,0,n); markFinish(S.legs); save(); render(); };
   function resetRace(){ S.startActual=null; S.legs.forEach(l=>{ l.arrival=null; l.departure=null; }); markerSnap=null; S.markerSnap=null; if(window.__oxEdit)window.__oxEdit.clear(); if(window.__oxCollapsed)window.__oxCollapsed.clear(); save(); render(); tickClock(); }
-  document.getElementById('resetBtn').onclick=()=>{ if(window.__oxEdit)window.__oxEdit.clear(); S=fresh(); save(); render(); };
+  document.getElementById('resetRaceTimesBtn').onclick=()=>{
+    const st=document.getElementById('resetRaceStatus');
+    if(!confirm('Reset all race times? This clears your start time and every section arrival/departure, but keeps your route and plan. This cannot be undone.')) return;
+    resetRace();
+    if(st){ st.textContent='\u2713 Race times reset \u2014 plan kept'; setTimeout(()=>{ if(st) st.textContent=''; },4000); }
+  };
+  document.getElementById('resetBtn').onclick=()=>{
+    if(!confirm('Reset EVERYTHING to defaults? This wipes your route, sections, target, pace, and all race times. This cannot be undone.')) return;
+    if(window.__oxEdit)window.__oxEdit.clear(); S=fresh(); save(); render();
+  };
   document.getElementById('archiveBtn').onclick=()=>{
     const st=document.getElementById('archiveStatus');
     const now=new Date();
