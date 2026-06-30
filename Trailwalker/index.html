@@ -336,10 +336,22 @@
     </div>
   </div>
 
+  <div class="tip-overlay" id="sectionElevOverlay" onclick="this.classList.remove('show')">
+    <div class="splits-popup" onclick="event.stopPropagation()">
+      <h4 id="sectionElevTitle">Section elevation</h4>
+      <div style="display:flex;gap:12px">
+        <svg id="sectionElevSvg" viewBox="0 0 240 140" style="flex:1;min-width:0;height:140px;display:block"></svg>
+        <div id="sectionElevLegend" style="width:84px;flex-shrink:0;font-size:11px;color:var(--muted)"></div>
+      </div>
+      <div id="sectionElevStats" style="margin-top:12px;font-size:12px;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px"></div>
+      <span class="close-btn" onclick="document.getElementById('sectionElevOverlay').classList.remove('show')">Close</span>
+    </div>
+  </div>
+
   <div class="seg-h"><span class="t">Route map</span><span style="display:flex;gap:8px"><button class="btn ghost" id="mapToggle">Hide map</button><button class="btn ghost" id="gpsBtn">Show my GPS</button></span></div>
   <div class="mapwrap"><div id="map"></div></div>
 
-  <div class="seg-h"><span class="t">Route & elevation</span><span class="profmeta" id="profMeta"></span></div>
+  <div class="seg-h" id="elevHeaderRow" style="cursor:pointer" title="Tap for current section elevation"><span class="t">Route & elevation</span><span class="profmeta" id="profMeta"></span></div>
   <div class="profwrap">
     <div id="profile"></div>
     <div class="proflegend">
@@ -1385,6 +1397,77 @@
         :'<p style="color:var(--muted);font-size:13px;margin:0">No rest stops completed yet.</p>';
     }
   };
+  function showSectionElevPopup(){
+    const overlay=document.getElementById('sectionElevOverlay');
+    if(!overlay) return;
+    const c=compute();
+    const wi=c.action==='arrive'?c.walkingIdx:(c.action==='leave'?c.restingIdx:(c.nextIdx>=0?c.nextIdx:-1));
+    if(wi<0||!S.legs[wi]||!RT.frac||!RT.frac.length){
+      document.getElementById('sectionElevTitle').textContent='Section elevation';
+      document.getElementById('sectionElevSvg').innerHTML='';
+      document.getElementById('sectionElevLegend').innerHTML='<div style="color:var(--faint)">No section data yet.</div>';
+      document.getElementById('sectionElevStats').innerHTML='';
+      overlay.classList.add('show');
+      return;
+    }
+    const leg=S.legs[wi];
+    const secStartKm=S.legs.slice(0,wi).reduce((a,l)=>a+l.km,0);
+    const secEndKm=secStartKm+leg.km;
+    const total=RT.total_km||S.legs.reduce((a,l)=>a+l.km,0)||1;
+    const f0=secStartKm/total, f1=secEndKm/total;
+
+    // gather elevation points within this section's frac range
+    const E=RT.ele,Fr=RT.frac;
+    let pts=[];
+    if(E&&E.length){
+      for(let i=0;i<Fr.length;i++){
+        if(Fr[i]>=f0-0.0005&&Fr[i]<=f1+0.0005) pts.push({f:Fr[i],e:E[i]});
+      }
+    }
+    if(pts.length<2){
+      // fallback: just two points using leg asc/desc as a flat ramp shape
+      pts=[{f:f0,e:0},{f:f1,e:(leg.asc||0)-(leg.desc||0)}];
+    }
+    const emin=Math.min(...pts.map(p=>p.e));
+    const emax=Math.max(...pts.map(p=>p.e));
+    const rng=Math.max(1,emax-emin);
+    const W=240,H=120;
+    let path='M0,'+H;
+    pts.forEach(p=>{
+      const x=((p.f-f0)/(f1-f0||1))*W;
+      const y=H-((p.e-emin)/rng)*H;
+      path+=' L'+Math.round(x*10)/10+','+Math.round(y*10)/10;
+    });
+    path+=' L'+W+','+H+' Z';
+
+    // current position marker
+    const dispPosKm=markerSnap&&c.begun?markerSnap.km:c.posKm;
+    const curF=Math.max(f0,Math.min(f1,dispPosKm/total));
+    const curX=((curF-f0)/(f1-f0||1))*W;
+    const curE=eleAt(curF);
+    const curY=H-((curE-emin)/rng)*H;
+    const showMarker=(curF>f0-0.0005&&curF<f1+0.0005&&c.begun);
+
+    const svg=document.getElementById('sectionElevSvg');
+    svg.setAttribute('viewBox','0 0 '+W+' '+(H+20));
+    svg.innerHTML='<path d="'+path+'" fill="var(--lamp)" opacity="0.25"/>'+
+      '<path d="'+path.replace(' Z','')+'" fill="none" stroke="var(--lamp)" stroke-width="2"/>'+
+      (showMarker?'<line x1="'+curX+'" y1="0" x2="'+curX+'" y2="'+H+'" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="3,3"/><circle cx="'+curX+'" cy="'+curY+'" r="4" fill="var(--ink)"/>':'')+
+      '<text x="2" y="'+H+14+'" font-size="9" fill="var(--faint)">'+Math.round(emin)+'m</text>'+
+      '<text x="'+(W-2)+'" y="'+(H+14)+'" font-size="9" fill="var(--faint)" text-anchor="end">'+Math.round(emax)+'m</text>';
+
+    document.getElementById('sectionElevTitle').textContent=leg.name;
+    document.getElementById('sectionElevLegend').innerHTML=
+      '<div style="display:flex;align-items:center;gap:5px;margin-bottom:8px"><span style="width:10px;height:10px;border-radius:2px;background:var(--ahead);display:inline-block"></span>climb <b style="color:var(--ink)">'+(leg.asc||0)+'m</b></div>'+
+      '<div style="display:flex;align-items:center;gap:5px;margin-bottom:8px"><span style="width:10px;height:10px;border-radius:2px;background:var(--behind);display:inline-block"></span>descent <b style="color:var(--ink)">'+(leg.desc||0)+'m</b></div>'+
+      (showMarker?'<div style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:var(--ink);display:inline-block"></span>you<br><b style="color:var(--ink)">'+Math.round(curE)+'m</b></div>':'');
+
+    const grade=sectionGrade(leg.asc||0,leg.desc||0,leg.km||1)*100;
+    document.getElementById('sectionElevStats').innerHTML=
+      '<span>'+leg.km+' km</span><span>net grade '+(grade>=0?'+':'')+grade.toFixed(1)+'%</span><span>range '+Math.round(emin)+'–'+Math.round(emax)+'m</span>';
+
+    overlay.classList.add('show');
+  }
   function showSplitsPopup(){
     const overlay=document.getElementById('splitsOverlay');
     const content=document.getElementById('splitsContent');
@@ -2225,6 +2308,8 @@
   // ─────────────────────────────────────────────────────────────
 
   document.getElementById('teamNum').oninput=e=>{ S.teamNum=e.target.value.trim()||'0565'; save(); };
+  const _elevHeader=document.getElementById('elevHeaderRow');
+  if(_elevHeader) _elevHeader.addEventListener('click',showSectionElevPopup);
 
   function reapplyClimbDescHeat(){
     if(!S.legs||!S.legs.length) return;
