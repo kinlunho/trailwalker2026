@@ -429,6 +429,23 @@
       </div>
     </div>
     <div class="tp">
+      <h3>Split strategy</h3>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Whether to walk faster early and ease off later, or start conservative and pick up the pace. Applied as a gradual ramp across the whole race — the midpoint stays at your normal plan pace.</div>
+      <div style="display:flex;gap:6px;margin-bottom:12px">
+        <button class="btn" id="splitEvenBtn" style="flex:1">Even</button>
+        <button class="btn" id="splitNegBtn" style="flex:1">Negative split</button>
+        <button class="btn" id="splitPosBtn" style="flex:1">Positive split</button>
+      </div>
+      <div id="splitSwingWrap" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span style="font-size:13px;font-weight:600">Swing</span>
+          <span id="splitSwingPct" style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--card2)">10%</span>
+        </div>
+        <input type="range" id="splitSwingSlider" min="2" max="30" value="10" step="1" style="width:100%">
+        <div style="font-size:11px;color:var(--faint);margin-top:4px" id="splitSwingExplain"></div>
+      </div>
+    </div>
+    <div class="tp">
       <h3>Heat factor</h3>
       <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Walking is slower in heat — your body works harder to cool down, which reduces the pace you can sustain. This adds time to sections based on what hour you are projected to walk through them. A section crossed at 1pm gets the full slowdown; the same section crossed at 6am or 9pm gets none.</div>
       <div class="field"><label for="heatToggle">Apply heat factor</label><input type="checkbox" id="heatToggle" style="width:20px;height:20px"></div>
@@ -653,7 +670,7 @@
   function defaultStart(){ return new Date(2026,10,20,9,0,0,0).toISOString(); }
   function fresh(){ const legs=DEFAULT_LEGS.map(l=>({...l, arrival:null, departure:null}));
     applyPace(legs,DEF_PACE); markFinish(legs);
-    return {startPlanned:defaultStart(), startActual:null, cutoffH:48, targetH:DEF_TARGET, paceMin:DEF_PACE, raceName:'', raceKm:0, raceYear:new Date().getFullYear(), raceRegion:'', raceCountry:'', teamNum:'0565', donateUrl:'https://event.oxfamtrailwalker.org.hk/en/Donation/Sponsorship?tId=r1tQWNW__bA%3D', ejsServiceId:'', ejsTemplateId:'', ejsPublicKey:'', smsNumbers:[], climbAdj:0, descAdj:0, heatOn:false, heatPeak:8, defaultRest:10, supportRestBonus:15, legs}; }
+    return {startPlanned:defaultStart(), startActual:null, cutoffH:48, targetH:DEF_TARGET, paceMin:DEF_PACE, raceName:'', raceKm:0, raceYear:new Date().getFullYear(), raceRegion:'', raceCountry:'', teamNum:'0565', donateUrl:'https://event.oxfamtrailwalker.org.hk/en/Donation/Sponsorship?tId=r1tQWNW__bA%3D', ejsServiceId:'', ejsTemplateId:'', ejsPublicKey:'', smsNumbers:[], climbAdj:0, descAdj:0, heatOn:false, heatPeak:8, defaultRest:10, supportRestBonus:15, splitStrategy:'even', splitPct:0, legs}; }
 
   async function load(){
     initFirebase();
@@ -699,7 +716,7 @@
     markFinish(S.legs);
     if(!S.startPlanned)S.startPlanned=defaultStart();
     if(!S.cutoffH)S.cutoffH=48; if(!S.targetH)S.targetH=DEF_TARGET; if(!S.paceMin)S.paceMin=DEF_PACE;
-    if(!S.teamNum)S.teamNum='0565'; if(S.raceName===undefined)S.raceName=''; if(!S.raceKm)S.raceKm=0; if(!S.raceYear)S.raceYear=new Date().getFullYear(); if(S.raceRegion===undefined)S.raceRegion=''; if(S.raceCountry===undefined)S.raceCountry=''; if(S.climbAdj===undefined)S.climbAdj=0; if(S.descAdj===undefined)S.descAdj=0; if(S.heatOn===undefined)S.heatOn=false; if(!S.heatPeak)S.heatPeak=8; if(S.defaultRest===undefined)S.defaultRest=10; if(S.supportRestBonus===undefined)S.supportRestBonus=15; if(S.donateUrl===undefined)S.donateUrl='https://event.oxfamtrailwalker.org.hk/en/Donation/Sponsorship?tId=r1tQWNW__bA%3D';
+    if(!S.teamNum)S.teamNum='0565'; if(S.raceName===undefined)S.raceName=''; if(!S.raceKm)S.raceKm=0; if(!S.raceYear)S.raceYear=new Date().getFullYear(); if(S.raceRegion===undefined)S.raceRegion=''; if(S.raceCountry===undefined)S.raceCountry=''; if(S.climbAdj===undefined)S.climbAdj=0; if(S.descAdj===undefined)S.descAdj=0; if(S.heatOn===undefined)S.heatOn=false; if(!S.heatPeak)S.heatPeak=8; if(S.defaultRest===undefined)S.defaultRest=10; if(S.supportRestBonus===undefined)S.supportRestBonus=15; if(S.donateUrl===undefined)S.donateUrl='https://event.oxfamtrailwalker.org.hk/en/Donation/Sponsorship?tId=r1tQWNW__bA%3D'; if(S.splitStrategy===undefined)S.splitStrategy='even'; if(S.splitPct===undefined)S.splitPct=0;
   }
   async function saveOld(){}
 
@@ -1107,7 +1124,7 @@
     window._cpMarkers=[];
     // restore legs
     if(entry.legs&&entry.legs.length){
-      S.legs=entry.legs.map(l=>({...l,arrival:null,departure:null}));
+      S.legs=entry.legs.map(l=>({...l,arrival:null,departure:null,baseWalk:undefined}));
       RT.cp=(window._cpList||[]).map((c,i)=>['S'+(i+1)+' ('+c.km+'km)',c.frac]);
     }
     // generate markers
@@ -1302,20 +1319,39 @@
     const t=(h-sunrise)/(sunset-sunrise); // 0 to 1 across daylight
     return Math.max(0,Math.sin(t*Math.PI));
   }
-  function applyClimbDescHeat(legs,climbAdj,descAdj,heatOn,heatPeak,startTime){
-    // Recompute each leg's walk time from its Naismith base, adjusted for climb/desc sliders and heat
+  function applyClimbDescHeat(legs,climbAdj,descAdj,heatOn,heatPeak,startTime,splitStrategy,splitPct){
+    // Adjusts each leg's EXISTING walk time (whatever pacing model produced it — hand-tuned
+    // defaults or Naismith-built sections) for climb/desc sliders, heat, and split strategy.
+    // Does NOT regenerate the baseline from nabSmithMin — that would silently overwrite
+    // hand-tuned or previously-saved walk times with a fresh from-scratch estimate.
     // climbAdj/descAdj are percent: positive = faster, negative = slower
+    // splitStrategy: 'even' | 'positive' (fast start, fade) | 'negative' (conservative start, speed up)
+    // splitPct: total swing from first to last section, e.g. 10 = first section 5% faster, last 5% slower (positive)
     let t=startTime?startTime.getTime():Date.now();
+    const totalKm=legs.reduce((a,l)=>a+(l.km||0),0)||1;
+    let cumKm=0;
     legs.forEach(l=>{
       const km=l.km||0, asc=l.asc||0, desc=l.desc||0;
-      const baseMin=nabSmithMin(km,asc,desc);
-      // split base time proportionally by ascent vs descent vs flat contribution to apply sliders
-      const ascMin=asc/10; // naismith ascent contribution
+      // baseline = this leg's own walk time (its current plan), captured once so repeated
+      // calls (e.g. moving a slider back and forth) don't compound adjustments
+      if(l.baseWalk==null) l.baseWalk=l.walk;
+      const baseMin=l.baseWalk;
+      // split the baseline proportionally by ascent vs descent vs flat contribution to apply sliders
+      const ascMin=asc/10; // naismith-style ascent contribution, used only to weight the slider effect
       const descPenalty=desc>300*km?desc/20:0;
       const flatMin=Math.max(0,baseMin-ascMin-descPenalty);
       const adjAscMin=ascMin*(1-(climbAdj/100));
       const adjDescMin=descPenalty*(1-(descAdj/100));
       let adjWalk=flatMin+adjAscMin+adjDescMin;
+      // split strategy: scale by race progress (midpoint = no change, linear ramp to each end)
+      if(splitStrategy&&splitStrategy!=='even'&&splitPct>0){
+        const midKm=cumKm+km/2;
+        const progress=(midKm/totalKm)-0.5; // -0.5 (start) to +0.5 (finish)
+        const sign=splitStrategy==='positive'?1:-1; // positive: start fast(-), finish slow(+); negative: reverse
+        const factor=1+(sign*progress*(splitPct/100));
+        adjWalk=adjWalk*factor;
+      }
+      cumKm+=km;
       if(heatOn&&heatPeak>0){
         const arrivalTime=new Date(t+adjWalk*60000);
         const hf=heatFactorAt(arrivalTime);
@@ -2318,6 +2354,7 @@
     // populate climb/desc/heat controls
     const _csl=document.getElementById('climbSlider'); if(_csl&&!_csl.matches(':focus')){ _csl.value=S.climbAdj||0; const cp=document.getElementById('climbPct'); if(cp) cp.textContent=((S.climbAdj||0)>=0?'+':'')+(S.climbAdj||0)+'%'; }
     const _dsl=document.getElementById('descSlider'); if(_dsl&&!_dsl.matches(':focus')){ _dsl.value=S.descAdj||0; const dp=document.getElementById('descPct'); if(dp) dp.textContent=((S.descAdj||0)>=0?'+':'')+(S.descAdj||0)+'%'; }
+    if(typeof updateSplitStrategyUI==='function') updateSplitStrategyUI();
     const _htog=document.getElementById('heatToggle'); if(_htog) _htog.checked=!!S.heatOn;
     renderHeatPreview();
     const _hpk=document.getElementById('heatPeakInput'); if(_hpk&&!_hpk.matches(':focus')) _hpk.value=S.heatPeak||8;
@@ -2367,9 +2404,9 @@
       const rt=document.createElement('input'); rt.className='sc-route'; rt.placeholder='from → to (e.g. Pak Tam Chung → East Dam)'; rt.value=l.route||'';
       rt.onchange=()=>{ l.route=rt.value; save(); render(); }; card.appendChild(rt);
       const row=document.createElement('div'); row.className='sc-row';
-      row.appendChild(field('km', num(l.km,0.1,v=>{l.km=v; l.walk=paceWalk(S.legs,l,S.paceMin); save(); render();})));
-      row.appendChild(field('diff', sel(l.d,v=>{l.d=v; l.walk=paceWalk(S.legs,l,S.paceMin); save(); render();})));
-      row.appendChild(field('walk·m', num(l.walk,1,v=>{l.walk=v; save(); render();})));
+      row.appendChild(field('km', num(l.km,0.1,v=>{l.km=v; l.walk=paceWalk(S.legs,l,S.paceMin); l.baseWalk=l.walk; save(); render();})));
+      row.appendChild(field('diff', sel(l.d,v=>{l.d=v; l.walk=paceWalk(S.legs,l,S.paceMin); l.baseWalk=l.walk; save(); render();})));
+      row.appendChild(field('walk·m', num(l.walk,1,v=>{l.walk=v; l.baseWalk=v; save(); render();})));
       if(!l.finish) row.appendChild(field('rest·m', num(l.brk,1,v=>{l.brk=v; if(!l.sup) l.baseBrk=v; else l.baseBrk=Math.max(0,v-(S.supportRestBonus!==undefined?S.supportRestBonus:15)); save(); render();})));
       row.appendChild(field('climb·m', num(l.asc||0,5,v=>{l.asc=v; save(); render();})));
       row.appendChild(field('’17·m', num(l.t17||0,1,v=>{l.t17=v; save(); render();})));
@@ -2527,7 +2564,7 @@
 
   function reapplyClimbDescHeat(){
     if(!S.legs||!S.legs.length) return;
-    applyClimbDescHeat(S.legs,S.climbAdj||0,S.descAdj||0,S.heatOn,S.heatPeak||8,D(S.startPlanned)||D(S.startActual));
+    applyClimbDescHeat(S.legs,S.climbAdj||0,S.descAdj||0,S.heatOn,S.heatPeak||8,D(S.startPlanned)||D(S.startActual),S.splitStrategy||'even',S.splitPct||0);
     save(); render(); renderHeatPreview();
   }
   function renderHeatPreview(){
@@ -2552,7 +2589,7 @@
     }
     // compute per-section impact: walk time with heat off vs heat on
     const legsOff=S.legs.map(l=>({...l}));
-    applyClimbDescHeat(legsOff,S.climbAdj||0,S.descAdj||0,false,0,D(S.startPlanned)||D(S.startActual));
+    applyClimbDescHeat(legsOff,S.climbAdj||0,S.descAdj||0,false,0,D(S.startPlanned)||D(S.startActual),S.splitStrategy||'even',S.splitPct||0);
     const list=document.getElementById('heatImpactList');
     const totalEl=document.getElementById('heatTotalImpact');
     if(list){
@@ -2581,6 +2618,41 @@
   if(_heatTog) _heatTog.onchange=()=>{ S.heatOn=_heatTog.checked; reapplyClimbDescHeat(); };
   const _heatPk=document.getElementById('heatPeakInput');
   if(_heatPk) _heatPk.onchange=()=>{ const v=parseFloat(_heatPk.value); if(isFinite(v)&&v>=0){ S.heatPeak=v; reapplyClimbDescHeat(); } };
+  function updateSplitStrategyUI(){
+    ['splitEvenBtn','splitNegBtn','splitPosBtn'].forEach(id=>{
+      const btn=document.getElementById(id); if(!btn) return;
+      btn.style.background=''; btn.style.color=''; btn.style.borderColor='';
+    });
+    const strat=S.splitStrategy||'even';
+    const activeId=strat==='negative'?'splitNegBtn':strat==='positive'?'splitPosBtn':'splitEvenBtn';
+    const activeBtn=document.getElementById(activeId);
+    if(activeBtn){ activeBtn.style.background='var(--lamp)'; activeBtn.style.color='#1a1206'; activeBtn.style.borderColor='var(--lamp)'; }
+    const wrap=document.getElementById('splitSwingWrap');
+    if(wrap) wrap.style.display=strat==='even'?'none':'block';
+    const swingSl=document.getElementById('splitSwingSlider');
+    if(swingSl) swingSl.value=S.splitPct||10;
+    const swingPctEl=document.getElementById('splitSwingPct');
+    if(swingPctEl) swingPctEl.textContent=(S.splitPct||10)+'%';
+    const explainEl=document.getElementById('splitSwingExplain');
+    if(explainEl){
+      const half=Math.round((S.splitPct||10)/2);
+      explainEl.textContent=strat==='negative'
+        ?('First sections ~'+half+'% slower than plan, last sections ~'+half+'% faster — easing in, picking up the pace later.')
+        :strat==='positive'
+        ?('First sections ~'+half+'% faster than plan, last sections ~'+half+'% slower — strong start, easing off as you tire.')
+        :'';
+    }
+  }
+  ['splitEvenBtn','splitNegBtn','splitPosBtn'].forEach((id,idx)=>{
+    const btn=document.getElementById(id); if(!btn) return;
+    const strat=idx===0?'even':idx===1?'negative':'positive';
+    btn.onclick=()=>{ S.splitStrategy=strat; if(strat!=='even'&&!S.splitPct) S.splitPct=10; updateSplitStrategyUI(); reapplyClimbDescHeat(); };
+  });
+  const _splitSwingSl=document.getElementById('splitSwingSlider');
+  if(_splitSwingSl){
+    _splitSwingSl.oninput=()=>{ document.getElementById('splitSwingPct').textContent=_splitSwingSl.value+'%'; };
+    _splitSwingSl.onchange=()=>{ S.splitPct=parseInt(_splitSwingSl.value); updateSplitStrategyUI(); reapplyClimbDescHeat(); };
+  }
   const _defRest=document.getElementById('defaultRestInput');
   if(_defRest) _defRest.onchange=()=>{ const v=parseFloat(_defRest.value); if(isFinite(v)&&v>=0){ S.defaultRest=v; save(); } };
   const _supBonus=document.getElementById('supportBonusInput');
