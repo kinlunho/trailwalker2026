@@ -305,6 +305,7 @@
     <div class="gauge">
       <div class="row"><span id="barleft">Start</span><span id="barright">Section end</span></div>
       <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:2px"><span id="gradeBadge"></span><span id="elevBadge"></span></div>
+      <div id="lookaheadAlert" style="display:none;font-size:11px;margin-top:6px;padding:5px 9px;border-radius:8px;align-items:center;gap:6px"></div>
       <div class="bar" id="bar"><span class="tgt" id="tgtmark" style="left:0%"></span><span class="mkr" id="mkrmark" style="display:none;left:0%"></span><i style="width:0%"></i></div>
     </div>
   </div>
@@ -927,6 +928,57 @@
     let lo=0,hi=Fr.length-1; while(lo<hi){const m=(lo+hi)>>1; if(Fr[m]<f)lo=m+1; else hi=m;}
     const i=Math.max(1,lo); const a=Fr[i-1],b=Fr[i]; const t=b>a?(f-a)/(b-a):0;
     return (RT.ele[i-1]||0)+((RT.ele[i]||0)-(RT.ele[i-1]||0))*t; }
+
+  function lookAheadClimb(curKm,totalKm){
+    // scans the real GPX elevation profile ahead of curKm for the next significant
+    // sustained climb or descent (>=30m gain/loss over a contiguous stretch within next 3km)
+    const E=RT.ele,Fr=RT.frac; if(!E||!E.length||!totalKm) return null;
+    const lookAheadKm=3; const minSignificantM=30;
+    const startKm=curKm, endKm=Math.min(totalKm,curKm+lookAheadKm);
+    // find index range in the profile arrays
+    const f0=startKm/totalKm, f1=endKm/totalKm;
+    let i0=0,i1=E.length-1;
+    for(let i=0;i<Fr.length;i++){ if(Fr[i]>=f0){ i0=i; break; } }
+    for(let i=Fr.length-1;i>=0;i--){ if(Fr[i]<=f1){ i1=i; break; } }
+    if(i1<=i0) return null;
+    // walk forward, find first point where cumulative net change exceeds threshold in one direction
+    let segStartIdx=i0, segStartKm=Fr[i0]*totalKm;
+    let dir=0; // 1=climbing, -1=descending
+    for(let i=i0+1;i<=i1;i++){
+      const dh=E[i]-E[i-1];
+      const curDir=dh>0.5?1:dh<-0.5?-1:0;
+      if(curDir===0) continue;
+      if(dir===0){ dir=curDir; segStartIdx=i-1; segStartKm=Fr[i-1]*totalKm; continue; }
+      if(curDir!==dir){
+        // direction changed: check if the completed segment was significant
+        const netChange=Math.abs(E[i-1]-E[segStartIdx]);
+        if(netChange>=minSignificantM){
+          return {
+            type:dir>0?'climb':'descent',
+            startKm:Math.round(segStartKm*100)/100,
+            distFromNowKm:Math.round((segStartKm-curKm)*100)/100,
+            elevChangeM:Math.round(netChange),
+            lengthKm:Math.round((Fr[i-1]*totalKm-segStartKm)*100)/100
+          };
+        }
+        dir=curDir; segStartIdx=i-1; segStartKm=Fr[i-1]*totalKm;
+      }
+    }
+    // check final open segment up to i1
+    if(dir!==0){
+      const netChange=Math.abs(E[i1]-E[segStartIdx]);
+      if(netChange>=minSignificantM){
+        return {
+          type:dir>0?'climb':'descent',
+          startKm:Math.round(segStartKm*100)/100,
+          distFromNowKm:Math.round((segStartKm-curKm)*100)/100,
+          elevChangeM:Math.round(netChange),
+          lengthKm:Math.round((Fr[i1]*totalKm-segStartKm)*100)/100
+        };
+      }
+    }
+    return null;
+  }
 
   function buildProfile(c){
     const W=1000,H=120; const E=RT.ele,Fr=RT.frac;
@@ -1852,6 +1904,23 @@
         gradeEl.textContent=arrow+' '+(grd>=0?'+':'')+grd.toFixed(1)+'% grade';
       }
       if(elevEl) elevEl.textContent='↑'+(S.legs[wi2].asc||0)+'m ↓'+(S.legs[wi2].desc||0)+'m';
+      // look-ahead climb/descent alert
+      const laEl=document.getElementById('lookaheadAlert');
+      if(laEl){
+        const curKmForLA=markerSnap&&c.begun?markerSnap.km:c.posKm;
+        const totalKmForLA=RT.total_km||S.legs.reduce((a,l)=>a+l.km,0);
+        const la=lookAheadClimb(curKmForLA,totalKmForLA);
+        if(la && la.distFromNowKm<2.5){
+          laEl.style.display='flex';
+          const isClimb=la.type==='climb';
+          laEl.style.background=isClimb?'rgba(226,115,78,.12)':'rgba(106,163,196,.12)';
+          laEl.style.color=isClimb?'var(--behind)':'var(--rest)';
+          const distTxt=la.distFromNowKm<=0.05?'now':('in '+la.distFromNowKm.toFixed(1)+'km');
+          laEl.innerHTML=(isClimb?'⛰':'⬇')+' '+(isClimb?'Climb':'Descent')+' ahead '+distTxt+' · '+(isClimb?'↑':'↓')+la.elevChangeM+'m over '+la.lengthKm+'km';
+        } else {
+          laEl.style.display='none';
+        }
+      }
     } else {
       // fallback: whole-race bar
       bar.classList.toggle('behind',!ahead);
@@ -1860,6 +1929,7 @@
       document.getElementById('mkrmark').style.display='none';
       const bl=document.getElementById('barleft'); const br=document.getElementById('barright');
       if(bl) bl.textContent='Start'; if(br) br.textContent='Target · cutoff';
+      const laEl2=document.getElementById('lookaheadAlert'); if(laEl2) laEl2.style.display='none';
     }
 
     // weather strip
