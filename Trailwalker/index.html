@@ -226,8 +226,13 @@
   .editrow input{font:inherit; background:var(--bg2); color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:7px; font-size:12px; color-scheme:dark;}
   .undo{font-size:12px; color:var(--muted); background:none; border:none; cursor:pointer; text-decoration:underline; padding:6px; grid-column:1/-1; justify-self:start;}
 
-  .panel{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:14px; display:none;}
+  .panel{position:fixed; inset:0; z-index:200; background:var(--bg); display:none; overflow-y:auto; -webkit-overflow-scrolling:touch;}
   .panel.open{display:block;}
+  .panel-inner{max-width:560px; margin:0 auto; padding:18px max(22px, env(safe-area-inset-right)) max(40px, calc(16px + env(safe-area-inset-bottom))) max(22px, env(safe-area-inset-left));}
+  .panel-header{display:flex; align-items:center; gap:10px; padding:max(12px, env(safe-area-inset-top)) max(22px, env(safe-area-inset-right)) 10px max(22px, env(safe-area-inset-left)); position:sticky; top:0; background:var(--bg); z-index:5; border-bottom:1px solid var(--line); margin-bottom:14px;}
+  .panel-back{background:var(--card); border:1px solid var(--line); color:var(--ink); border-radius:10px; width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer; flex-shrink:0;}
+  .panel-back:hover{background:var(--card2);}
+  .panel-title{font-size:16px; font-weight:800; letter-spacing:.04em;}
   .panel h3{font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin:4px 0 10px;}
   .tp{background:var(--bg2); border:1px solid var(--line); border-radius:11px; padding:12px; margin-bottom:14px;}
   .tp h3{margin-top:0;}
@@ -264,7 +269,7 @@
 </svg>
 
 <div class="wrap">
-  <div class="masthead"><h1 id="raceTitle">Oxfam <b>Trailwalker</b> 100</h1><div class="sub" id="raceDates">20–22 Nov 2026</div></div>
+  <div class="masthead"><h1 id="raceTitle">Oxfam <b>Trailwalker</b> 100</h1><div style="display:flex;align-items:center;gap:8px"><div class="sub" id="raceDates">20–22 Nov 2026</div><button id="editToggle" aria-label="Settings" style="background:var(--card);border:1px solid var(--line);color:var(--muted);border-radius:8px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;flex-shrink:0">⚙</button></div></div>
   <div class="syncbar" id="syncbar"></div>
 
   <div class="hero">
@@ -294,6 +299,7 @@
     <div id="startWrap"></div>
     <div class="gauge">
       <div class="row"><span id="barleft">Start</span><span id="barright">Section end</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:2px"><span id="gradeBadge"></span><span id="elevBadge"></span></div>
       <div class="bar" id="bar"><span class="tgt" id="tgtmark" style="left:0%"></span><span class="mkr" id="mkrmark" style="display:none;left:0%"></span><i style="width:0%"></i></div>
     </div>
   </div>
@@ -343,10 +349,14 @@
     </div>
   </div>
 
-  <div class="seg-h"><span class="t">Sections & checkpoints</span>
-    <button class="btn ghost" id="editToggle">Target & plan</button></div>
+  <div class="seg-h"><span class="t">Sections & checkpoints</span></div>
 
   <div class="panel" id="panel">
+    <div class="panel-header">
+      <button class="panel-back" id="panelBack" aria-label="Close settings">&#8592;</button>
+      <span class="panel-title">Settings</span>
+    </div>
+    <div class="panel-inner">
     <div class="tp">
       <h3>Race info</h3>
       <div class="field"><label for="raceNameInput">Race name</label><input type="text" id="raceNameInput" placeholder="e.g. Moontrekker 40" style="width:180px;text-align:left"></div>
@@ -355,9 +365,45 @@
     </div>
     <div class="tp">
       <h3>Your target & pace</h3>
-      <div class="field"><label for="targetInput">Target finish (hours)</label><input type="number" id="targetInput" min="1" step="0.5"></div>
-      <div class="field"><label for="paceInput">Estimated pace (km/h)</label><input type="number" id="paceInput" min="1" step="0.1"></div>
+      <div class="field"><label for="targetInput">Elapsed time (hours)</label><input type="number" id="targetInput" min="1" step="0.5"></div>
+      <div class="field"><label for="paceInput">Average pace (km/h)</label><input type="number" id="paceInput" min="1" step="0.1"></div>
+      <div class="field"><label for="ngpInput">Normalized pace (km/h)</label><input type="number" id="ngpInput" min="1" step="0.1" disabled style="opacity:0.6"></div>
+      <div style="font-size:11px;color:var(--faint);margin-top:-2px;margin-bottom:8px">Average pace is your real moving speed including terrain. Normalized pace is the flat-ground equivalent effort, calculated automatically from elevation.</div>
       <div class="tp-read" id="tpRead"></div>
+    </div>
+    <div class="tp">
+      <h3>Climb & descent adjustment</h3>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Shift pace faster or slower on climbs and descents relative to the default Naismith model. Flats compensate automatically to keep your overall target.</div>
+      <div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span style="font-size:13px;font-weight:600">Climbing</span>
+          <span id="climbPct" style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--card2)">+0%</span>
+        </div>
+        <input type="range" id="climbSlider" min="-20" max="20" value="0" step="1" style="width:100%">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--faint)"><span>slower</span><span>faster</span></div>
+      </div>
+      <div style="margin-bottom:4px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span style="font-size:13px;font-weight:600">Descending</span>
+          <span id="descPct" style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--card2)">+0%</span>
+        </div>
+        <input type="range" id="descSlider" min="-20" max="20" value="0" step="1" style="width:100%">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--faint)"><span>slower</span><span>faster</span></div>
+      </div>
+    </div>
+    <div class="tp">
+      <h3>Heat factor</h3>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Slows your pace during the hottest part of the day, peaks at midday, zero overnight. Especially relevant for exposed climbs like Needle Hill in section 7.</div>
+      <div class="field"><label for="heatToggle">Apply heat factor</label><input type="checkbox" id="heatToggle" style="width:20px;height:20px"></div>
+      <div class="field"><label for="heatPeakInput">Peak slowdown (%)</label><input type="number" id="heatPeakInput" min="0" max="30" step="1" value="8"></div>
+      <div style="font-size:11px;color:var(--faint);margin-top:-2px">Peak slowdown applies around 1-3pm. Tapers to zero before sunrise and after sunset.</div>
+    </div>
+    <div class="tp">
+      <h3>Default rest times</h3>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Applied automatically to any new section you add, by checkpoint, auto-split, or the + Add section button.</div>
+      <div class="field"><label for="defaultRestInput">Default rest (min)</label><input type="number" id="defaultRestInput" min="0" step="1"></div>
+      <div class="field"><label for="supportBonusInput">Support stop bonus (min)</label><input type="number" id="supportBonusInput" min="0" step="1"></div>
+      <div style="font-size:11px;color:var(--faint);margin-top:-2px">When you tick "crew support point" on a section, this many extra minutes are added on top of its rest time automatically.</div>
     </div>
     <h3>Race setup</h3>
     <div style="margin-bottom:14px">
@@ -434,6 +480,7 @@
       <button class="btn" id="archiveBtn">📦 Archive this race</button>
     </div>
     <div id="archiveStatus" style="font-size:12px;color:var(--muted);margin-top:4px"></div>
+    </div>
   </div>
 
   <div class="trail" id="trail"></div>
@@ -555,7 +602,7 @@
   function defaultStart(){ return new Date(2026,10,20,9,0,0,0).toISOString(); }
   function fresh(){ const legs=DEFAULT_LEGS.map(l=>({...l, arrival:null, departure:null}));
     applyPace(legs,DEF_PACE); markFinish(legs);
-    return {startPlanned:defaultStart(), startActual:null, cutoffH:48, targetH:DEF_TARGET, paceMin:DEF_PACE, raceName:'', raceKm:0, raceYear:new Date().getFullYear(), teamNum:'0565', donateUrl:'https://event.oxfamtrailwalker.org.hk/en/Donation/Sponsorship?tId=r1tQWNW__bA%3D', ejsServiceId:'', ejsTemplateId:'', ejsPublicKey:'', smsNumbers:[], legs}; }
+    return {startPlanned:defaultStart(), startActual:null, cutoffH:48, targetH:DEF_TARGET, paceMin:DEF_PACE, raceName:'', raceKm:0, raceYear:new Date().getFullYear(), teamNum:'0565', donateUrl:'https://event.oxfamtrailwalker.org.hk/en/Donation/Sponsorship?tId=r1tQWNW__bA%3D', ejsServiceId:'', ejsTemplateId:'', ejsPublicKey:'', smsNumbers:[], climbAdj:0, descAdj:0, heatOn:false, heatPeak:8, defaultRest:10, supportRestBonus:15, legs}; }
 
   async function load(){
     initFirebase();
@@ -601,7 +648,7 @@
     markFinish(S.legs);
     if(!S.startPlanned)S.startPlanned=defaultStart();
     if(!S.cutoffH)S.cutoffH=48; if(!S.targetH)S.targetH=DEF_TARGET; if(!S.paceMin)S.paceMin=DEF_PACE;
-    if(!S.teamNum)S.teamNum='0565'; if(S.raceName===undefined)S.raceName=''; if(!S.raceKm)S.raceKm=0; if(!S.raceYear)S.raceYear=new Date().getFullYear(); if(S.donateUrl===undefined)S.donateUrl='https://event.oxfamtrailwalker.org.hk/en/Donation/Sponsorship?tId=r1tQWNW__bA%3D';
+    if(!S.teamNum)S.teamNum='0565'; if(S.raceName===undefined)S.raceName=''; if(!S.raceKm)S.raceKm=0; if(!S.raceYear)S.raceYear=new Date().getFullYear(); if(S.climbAdj===undefined)S.climbAdj=0; if(S.descAdj===undefined)S.descAdj=0; if(S.heatOn===undefined)S.heatOn=false; if(!S.heatPeak)S.heatPeak=8; if(S.defaultRest===undefined)S.defaultRest=10; if(S.supportRestBonus===undefined)S.supportRestBonus=15; if(S.donateUrl===undefined)S.donateUrl='https://event.oxfamtrailwalker.org.hk/en/Donation/Sponsorship?tId=r1tQWNW__bA%3D';
   }
   async function saveOld(){}
 
@@ -1090,11 +1137,62 @@
     return Math.max(1,Math.round(distKm*60/5+ascM/10+(descM>300*distKm?descM/20:0)));
   }
   function diffFromTerrain(distKm, ascM, descM){
-    // Difficulty 1-3 based on combined elevation per km
-    // <40m/km = easy (1), 40-80m/km = moderate (2), >80m/km = hard (3)
     if(distKm<=0) return 2;
     const combined=(ascM+descM)/distKm;
     return combined<40?1:combined<80?2:3;
+  }
+  // Minetti et al. 2002 cost-of-transport curve: energy cost (J/kg/m) as a function of grade
+  // Used to convert any uphill/downhill pace to an equivalent flat-ground pace (GAP)
+  function minettiCost(grade){
+    // grade is rise/run, e.g. 0.10 for 10% incline, -0.10 for 10% decline
+    const g=Math.max(-0.45,Math.min(0.45,grade));
+    return 155.4*g**5 - 30.4*g**4 - 43.3*g**3 + 46.3*g**2 + 19.5*g + 3.6;
+  }
+  function gapKmh(actualKmh, grade){
+    // Convert actual speed at a given grade to grade-adjusted (flat-equivalent) speed
+    if(!isFinite(actualKmh)||actualKmh<=0) return actualKmh;
+    const costActual=minettiCost(grade);
+    const costFlat=minettiCost(0);
+    if(costActual<=0) return actualKmh;
+    return actualKmh*(costActual/costFlat);
+  }
+  function sectionGrade(asc,desc,km){
+    if(km<=0) return 0;
+    return (asc-desc)/(km*1000);
+  }
+  function heatFactorAt(date){
+    // returns 0-1 multiplier for how much of peak heat slowdown applies at this time
+    // sine curve, zero before ~7am and after ~7pm, peak ~1-3pm
+    if(!date) return 0;
+    const h=date.getHours()+date.getMinutes()/60;
+    const sunrise=6.5, sunset=19;
+    if(h<=sunrise||h>=sunset) return 0;
+    const t=(h-sunrise)/(sunset-sunrise); // 0 to 1 across daylight
+    return Math.max(0,Math.sin(t*Math.PI));
+  }
+  function applyClimbDescHeat(legs,climbAdj,descAdj,heatOn,heatPeak,startTime){
+    // Recompute each leg's walk time from its Naismith base, adjusted for climb/desc sliders and heat
+    // climbAdj/descAdj are percent: positive = faster, negative = slower
+    let t=startTime?startTime.getTime():Date.now();
+    legs.forEach(l=>{
+      const km=l.km||0, asc=l.asc||0, desc=l.desc||0;
+      const baseMin=nabSmithMin(km,asc,desc);
+      // split base time proportionally by ascent vs descent vs flat contribution to apply sliders
+      const ascMin=asc/10; // naismith ascent contribution
+      const descPenalty=desc>300*km?desc/20:0;
+      const flatMin=Math.max(0,baseMin-ascMin-descPenalty);
+      const adjAscMin=ascMin*(1-(climbAdj/100));
+      const adjDescMin=descPenalty*(1-(descAdj/100));
+      let adjWalk=flatMin+adjAscMin+adjDescMin;
+      if(heatOn&&heatPeak>0){
+        const arrivalTime=new Date(t+adjWalk*60000);
+        const hf=heatFactorAt(arrivalTime);
+        adjWalk=adjWalk*(1+(heatPeak/100)*hf);
+      }
+      l.walk=Math.max(1,Math.round(adjWalk));
+      t+=l.walk*60000;
+      if(!l.finish) t+=(l.brk||0)*60000;
+    });
   }
   function parseGPX(text){
     const doc=new DOMParser().parseFromString(text,'application/xml');
@@ -1150,7 +1248,7 @@
       if(ci<cpFracs.length-1) cpForMap.push([secName,cpF]);
       const autoDiff=diffFromTerrain(secKm,secAsc,secDesc);
       legs.push({name:'Section '+(ci+1),km:secKm,d:autoDiff,walk:nabSmithMin(secKm,secAsc,secDesc),
-        brk:ci<cpFracs.length-1?10:0,asc:secAsc,desc:secDesc,t17:0,cutM:0,
+        brk:ci<cpFracs.length-1?(S&&S.defaultRest!==undefined?S.defaultRest:10):0,baseBrk:ci<cpFracs.length-1?(S&&S.defaultRest!==undefined?S.defaultRest:10):0,asc:secAsc,desc:secDesc,t17:0,cutM:0,
         arrival:null,departure:null,finish:ci===cpFracs.length-1,sup:false,route:''});
       prevF=cpF;
     });
@@ -1236,19 +1334,28 @@
     const cls=v=>v<=0?'g':'r';
     let totalPlan=0,totalAct=0,totalCum=0;
     if(tab==='walk'){
+      let totalKm=0,totalGAPmin=0;
       const rows=data.map(d=>{
         totalPlan+=d.walkPlan; totalAct+=d.walkAct; totalCum+=d.walkAct;
         const diff=d.walkAct-d.walkPlan;
+        const km=d.km||0; totalKm+=km;
+        const actKmh=km>0&&d.walkAct>0?km/(d.walkAct/60):0;
+        const grade=sectionGrade(d.asc||0,d.desc||0,km);
+        const gap=gapKmh(actKmh,grade);
+        if(gap>0&&km>0) totalGAPmin+=km/gap*60;
         return '<tr>'+
           '<td>'+d.name+'</td>'+
           '<td>'+fmt(d.walkPlan)+'</td>'+
           '<td>'+fmt(d.walkAct)+'</td>'+
           '<td class="'+cls(diff)+'">'+sign(diff)+fmt(diff)+'</td>'+
+          '<td style="color:var(--muted)">'+(gap>0?(Math.round(gap*10)/10)+' km/h':'—')+'</td>'+
           '</tr>';
       });
       const td=totalAct-totalPlan;
-      rows.push('<tr class="tot"><td>Total</td><td>'+fmt(totalPlan)+'</td><td>'+fmt(totalAct)+'</td><td class="'+cls(td)+'">'+sign(td)+fmt(td)+'</td></tr>');
-      content.innerHTML='<table><thead><tr><th>Section</th><th>Planned</th><th>Actual</th><th>Split</th></tr></thead><tbody>'+rows.join('')+'</tbody></table>';
+      const avgGAPkmh=totalGAPmin>0?totalKm/(totalGAPmin/60):0;
+      rows.push('<tr class="tot"><td>Total</td><td>'+fmt(totalPlan)+'</td><td>'+fmt(totalAct)+'</td><td class="'+cls(td)+'">'+sign(td)+fmt(td)+'</td><td style="color:var(--muted)">'+(avgGAPkmh>0?(Math.round(avgGAPkmh*10)/10)+' km/h':'—')+'</td></tr>');
+      content.innerHTML='<table><thead><tr><th>Section</th><th>Planned</th><th>Actual</th><th>Split</th><th>GAP</th></tr></thead><tbody>'+rows.join('')+'</tbody></table>'+
+        '<p style="font-size:10px;color:var(--faint);margin-top:8px">GAP = grade-adjusted pace, your equivalent flat-ground speed for that section’s terrain.</p>';
     } else {
       const rows=data.filter(d=>d.restPlan>0||d.restAct!=null).map(d=>{
         if(d.restAct!=null){totalPlan+=d.restPlan; totalAct+=d.restAct;}
@@ -1282,7 +1389,7 @@
       const arr=new Date(l.arrival);
       const walkAct=Math.round((arr-dep)/60000);
       const restAct=l.departure?Math.round((new Date(l.departure)-arr)/60000):null;
-      return {name:l.name,walkPlan:l.walk,walkAct,restPlan:l.brk,restAct};
+      return {name:l.name,walkPlan:l.walk,walkAct,restPlan:l.brk,restAct,km:l.km,asc:l.asc,desc:l.desc};
     });
     const tab=window._splitsActiveTab||'walk';
     window._renderSplitsTable(window._splitsData,tab);
@@ -1478,6 +1585,8 @@
     // compare against current active section's plan speed
     const activeLeg=c.walkingIdx>=0?S.legs[c.walkingIdx]:c.restingIdx>=0?S.legs[c.restingIdx]:null;
     const planKmh=activeLeg&&activeLeg.walk>0?activeLeg.km/(activeLeg.walk/60):(S.paceMin>0?60/S.paceMin:3.8);
+    const activeGrade=activeLeg?sectionGrade(activeLeg.asc||0,activeLeg.desc||0,activeLeg.km||1):0;
+    const dispGAP=isFinite(dispSpd)?gapKmh(dispSpd,activeGrade):NaN;
     const spdCls=isFinite(dispSpd)
       ?(dispSpd>planKmh+0.1?'spd-ok'    // green: above plan
       :dispSpd>=planKmh-0.1?''          // white: on par
@@ -1575,6 +1684,14 @@
       const bl=document.getElementById('barleft'); const br=document.getElementById('barright');
       if(bl) bl.textContent=S.legs[wi2].name;
       if(br) br.textContent=secKm+'km';
+      const gradeEl=document.getElementById('gradeBadge');
+      const elevEl=document.getElementById('elevBadge');
+      if(gradeEl){
+        const grd=sectionGrade(S.legs[wi2].asc||0,S.legs[wi2].desc||0,secKm)*100;
+        const arrow=grd>2?'↗':grd<-2?'↘':'→';
+        gradeEl.textContent=arrow+' '+(grd>=0?'+':'')+grd.toFixed(1)+'% grade';
+      }
+      if(elevEl) elevEl.textContent='↑'+(S.legs[wi2].asc||0)+'m ↓'+(S.legs[wi2].desc||0)+'m';
     } else {
       // fallback: whole-race bar
       bar.classList.toggle('behind',!ahead);
@@ -1608,13 +1725,16 @@
       '<div class="seg"><span class="k">Projected</span><span class="v">'+durTxt((c.projFinish-c.base)/MS)+'</span></div>'+
       '<div class="verdict '+(ahead?'ahead':'behindc')+'"><div class="sm">'+(ahead?'ahead of plan':'behind plan')+'</div>'+
       '<div class="big">'+(ahead?'▲ ':'▼ ')+durTxt(Math.abs(c.vsTargetMin))+'</div></div>';
-    document.getElementById('tstrip').onclick= READONLY ? null : ()=>{ const p=document.getElementById('panel'); p.classList.add('open'); p.scrollIntoView({behavior:'smooth',block:'start'}); };
+    document.getElementById('tstrip').onclick=null; document.getElementById('tstrip').style.cursor='default';
     const v17=document.getElementById('v17strip');
     if(c.cum17>0){ const a17=c.vs17Min<=0; v17.style.display='flex';
       v17.innerHTML='<span class="k17">vs 2017</span><span class="t17v">you '+durTxt(c.mv17)+' · ’17 '+durTxt(c.cum17)+'</span><span class="'+(a17?'ahead':'behindc')+'" style="margin-left:auto;font-weight:800">'+(a17?'▲ ':'▼ ')+durTxt(Math.abs(c.vs17Min))+'</span>';
     } else { v17.style.display='none'; }
 
-    speedEl.innerHTML= isFinite(dispSpd)?(Math.round(dispSpd*10)/10)+(liveSpd?' <small>km/h · live</small>':'<small> km/h</small>'):'<small>—</small>';
+    speedEl.innerHTML= isFinite(dispSpd)
+      ?(Math.round(dispSpd*10)/10)+(liveSpd?' <small>km/h · live</small>':'<small> km/h</small>')
+        +(isFinite(dispGAP)&&Math.abs(dispGAP-dispSpd)>0.15?'<div style="font-size:10px;color:var(--muted);font-weight:500;margin-top:2px">GAP '+(Math.round(dispGAP*10)/10)+' km/h</div>':'')
+      :'<small>—</small>';
     document.getElementById('moving').textContent= (c.begun&&c.liveMoving>0)?durTxt(c.liveMoving):'—';
     document.getElementById('resting').textContent= c.liveRestTotal>0?durTxt(c.liveRestTotal):'—';
     // moving time bar: actual vs plan walk for completed+current sections
@@ -1874,11 +1994,30 @@
     // panel
     document.getElementById('targetInput').value=S.targetH;
     document.getElementById('paceInput').value=Math.round(600/S.paceMin)/10;
+    // Normalized pace: weighted average GAP across all sections using actual elevation
+    let _ngpTotalKm=0,_ngpTotalMin=0;
+    S.legs.forEach(l=>{
+      const km=l.km||0; if(km<=0) return;
+      const grade=sectionGrade(l.asc||0,l.desc||0,km);
+      const planKmh=l.walk>0?km/(l.walk/60):0;
+      const gap=gapKmh(planKmh,grade);
+      if(gap>0){ _ngpTotalKm+=km; _ngpTotalMin+=km/gap*60; }
+    });
+    const ngpKmh=_ngpTotalMin>0?_ngpTotalKm/(_ngpTotalMin/60):0;
+    const ngpEl=document.getElementById('ngpInput'); if(ngpEl) ngpEl.value=ngpKmh>0?Math.round(ngpKmh*10)/10:'';
     document.getElementById('tpRead').innerHTML=
       'At <b>'+kmhTxt(S.paceMin)+' km/h</b> avg you finish in about <b>'+durTxt(c.totalPlanMin)+'</b> '+
       '(walk '+durTxt(c.totalPlanMin-c.totalBreak)+' + rest '+durTxt(c.totalBreak)+').<br>Target is <b>'+durTxt(S.targetH*60)+'</b> — '+
       (c.totalPlanMin<=S.targetH*60?'<span class="ahead">on track, '+durTxt(S.targetH*60-c.totalPlanMin)+' to spare.</span>':'<span class="behindc">short by '+durTxt(c.totalPlanMin-S.targetH*60)+'.</span>')+
-      '<br>To hit target you need ≥ <b>'+kmhTxt(c.paceForTarget)+' km/h</b> average moving pace.';
+      '<br>To hit target you need ≥ <b>'+kmhTxt(c.paceForTarget)+' km/h</b> average moving pace.'+
+      (ngpKmh>0?'<br>Normalized (flat-equivalent) pace: <b>'+(Math.round(ngpKmh*10)/10)+' km/h</b>.':'');
+    // populate climb/desc/heat controls
+    const _csl=document.getElementById('climbSlider'); if(_csl&&!_csl.matches(':focus')){ _csl.value=S.climbAdj||0; const cp=document.getElementById('climbPct'); if(cp) cp.textContent=((S.climbAdj||0)>=0?'+':'')+(S.climbAdj||0)+'%'; }
+    const _dsl=document.getElementById('descSlider'); if(_dsl&&!_dsl.matches(':focus')){ _dsl.value=S.descAdj||0; const dp=document.getElementById('descPct'); if(dp) dp.textContent=((S.descAdj||0)>=0?'+':'')+(S.descAdj||0)+'%'; }
+    const _htog=document.getElementById('heatToggle'); if(_htog) _htog.checked=!!S.heatOn;
+    const _hpk=document.getElementById('heatPeakInput'); if(_hpk&&!_hpk.matches(':focus')) _hpk.value=S.heatPeak||8;
+    const _drI=document.getElementById('defaultRestInput'); if(_drI&&!_drI.matches(':focus')) _drI.value=S.defaultRest!==undefined?S.defaultRest:10;
+    const _sbI=document.getElementById('supportBonusInput'); if(_sbI&&!_sbI.matches(':focus')) _sbI.value=S.supportRestBonus!==undefined?S.supportRestBonus:15;
     document.getElementById('startInput').value=toLocal(D(S.startPlanned));
     const asf=document.getElementById('actualStartField'); asf.style.display=S.startActual?'flex':'none';
     if(S.startActual)document.getElementById('actualStartInput').value=toLocal(D(S.startActual));
@@ -1924,7 +2063,7 @@
       row.appendChild(field('km', num(l.km,0.1,v=>{l.km=v; l.walk=paceWalk(S.legs,l,S.paceMin); save(); render();})));
       row.appendChild(field('diff', sel(l.d,v=>{l.d=v; l.walk=paceWalk(S.legs,l,S.paceMin); save(); render();})));
       row.appendChild(field('walk·m', num(l.walk,1,v=>{l.walk=v; save(); render();})));
-      if(!l.finish) row.appendChild(field('rest·m', num(l.brk,1,v=>{l.brk=v; save(); render();})));
+      if(!l.finish) row.appendChild(field('rest·m', num(l.brk,1,v=>{l.brk=v; if(!l.sup) l.baseBrk=v; else l.baseBrk=Math.max(0,v-(S.supportRestBonus!==undefined?S.supportRestBonus:15)); save(); render();})));
       row.appendChild(field('climb·m', num(l.asc||0,5,v=>{l.asc=v; save(); render();})));
       row.appendChild(field('’17·m', num(l.t17||0,1,v=>{l.t17=v; save(); render();})));
       row.appendChild(field('cut·min', num(l.cutM||0,15,v=>{l.cutM=v; save(); render();})));
@@ -1932,8 +2071,14 @@
       if(!l.finish){
         const sup=document.createElement('label'); sup.className='sc-sup';
         const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=!!l.sup;
-        cb.onchange=()=>{ l.sup=cb.checked; save(); render(); };
-        sup.appendChild(cb); sup.appendChild(document.createTextNode(' crew support point'));
+        cb.onchange=()=>{
+          if(l.baseBrk===undefined) l.baseBrk=l.brk; // capture base rest the first time
+          const bonus=S.supportRestBonus!==undefined?S.supportRestBonus:15;
+          l.sup=cb.checked;
+          l.brk=l.sup?(l.baseBrk+bonus):l.baseBrk;
+          save(); render();
+        };
+        sup.appendChild(cb); sup.appendChild(document.createTextNode(' crew support point ('+(S.supportRestBonus!==undefined?S.supportRestBonus:15)+'m bonus)'));
         card.appendChild(sup);
       }
       pe.appendChild(card);
@@ -1983,7 +2128,17 @@
   }
   function closeQR(){ document.getElementById('qrmodal').classList.remove('open'); }
 
-  document.getElementById('editToggle').onclick=()=>document.getElementById('panel').classList.toggle('open');
+  document.getElementById('editToggle').onclick=()=>{
+    document.getElementById('panel').classList.add('open');
+    document.body.style.overflow='hidden';
+    window.scrollTo(0,0);
+  };
+  function closeSettingsPanel(){
+    document.getElementById('panel').classList.remove('open');
+    document.body.style.overflow='';
+  }
+  document.getElementById('panelBack').onclick=closeSettingsPanel;
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSettingsPanel(); });
   document.getElementById('gpsBtn').onclick=toggleGPS;
   document.getElementById('mapToggle').onclick=()=>{ _mapHidden=!_mapHidden; setMap(_mapHidden); };
   document.getElementById('qrclose').onclick=closeQR;
@@ -2036,7 +2191,7 @@
         render(); } }); }catch(e){} } }
   // ── TOOLTIPS ─────────────────────────────────────────────────
   const TIPS={
-    "walking-speed":{t:"Walking speed",b:"Current pace in km/h. Green = at or above this section plan speed. Amber = slightly under. Red = significantly under plan. Live means calculated from your last marker position and time."},
+    "walking-speed":{t:"Walking speed",b:"Current pace in km/h. Green = at or above this section plan speed. Amber = slightly under. Red = significantly under plan. GAP (grade-adjusted pace) shown below converts your speed to its flat-ground equivalent, so you can compare effort across climbs, descents and flats fairly."},
     "moving-time":  null,
     "rest-time":    null,
     "distance-done":{t:"Distance done",b:"Kilometres completed based on last checkpoint arrived. The second number shows km remaining to the finish line (102km total)."},
@@ -2060,6 +2215,30 @@
   // ─────────────────────────────────────────────────────────────
 
   document.getElementById('teamNum').oninput=e=>{ S.teamNum=e.target.value.trim()||'0565'; save(); };
+
+  function reapplyClimbDescHeat(){
+    if(!S.legs||!S.legs.length) return;
+    applyClimbDescHeat(S.legs,S.climbAdj||0,S.descAdj||0,S.heatOn,S.heatPeak||8,D(S.startPlanned)||D(S.startActual));
+    save(); render();
+  }
+  const _climbSl=document.getElementById('climbSlider');
+  const _descSl=document.getElementById('descSlider');
+  if(_climbSl){
+    _climbSl.oninput=()=>{ document.getElementById('climbPct').textContent=(_climbSl.value>=0?'+':'')+_climbSl.value+'%'; };
+    _climbSl.onchange=()=>{ S.climbAdj=parseInt(_climbSl.value); reapplyClimbDescHeat(); };
+  }
+  if(_descSl){
+    _descSl.oninput=()=>{ document.getElementById('descPct').textContent=(_descSl.value>=0?'+':'')+_descSl.value+'%'; };
+    _descSl.onchange=()=>{ S.descAdj=parseInt(_descSl.value); reapplyClimbDescHeat(); };
+  }
+  const _heatTog=document.getElementById('heatToggle');
+  if(_heatTog) _heatTog.onchange=()=>{ S.heatOn=_heatTog.checked; reapplyClimbDescHeat(); };
+  const _heatPk=document.getElementById('heatPeakInput');
+  if(_heatPk) _heatPk.onchange=()=>{ const v=parseFloat(_heatPk.value); if(isFinite(v)&&v>=0){ S.heatPeak=v; reapplyClimbDescHeat(); } };
+  const _defRest=document.getElementById('defaultRestInput');
+  if(_defRest) _defRest.onchange=()=>{ const v=parseFloat(_defRest.value); if(isFinite(v)&&v>=0){ S.defaultRest=v; save(); } };
+  const _supBonus=document.getElementById('supportBonusInput');
+  if(_supBonus) _supBonus.onchange=()=>{ const v=parseFloat(_supBonus.value); if(isFinite(v)&&v>=0){ S.supportRestBonus=v; save(); } };
   document.getElementById('raceNameInput').oninput=e=>{ S.raceName=e.target.value; save(); render(); };
   document.getElementById('raceKmInput').oninput=e=>{ S.raceKm=parseFloat(e.target.value)||0; save(); render(); };
   document.getElementById('raceYearInput').oninput=e=>{ S.raceYear=parseInt(e.target.value)||new Date().getFullYear(); save(); render(); };
@@ -2180,7 +2359,7 @@
   document.getElementById('ejsPublicKey').oninput=e=>{ S.ejsPublicKey=e.target.value.trim(); save(); saveEjsConfig(); };
   document.getElementById('smsNumbers').oninput=e=>{ S.smsNumbers=e.target.value.split('\n').map(n=>n.trim()).filter(Boolean); save(); saveEjsConfig(); };
   document.getElementById('testSmsBtn').onclick=()=>{ sendSMS('\ud83c\udfc3 Trailwalker 2026 test SMS — notifications are working!'); };
-  const _alb=document.getElementById('addLegBtn'); if(_alb) _alb.onclick=()=>{ const n={name:'New section',route:'',km:5,d:2,sup:false,brk:7,asc:0,arrival:null,departure:null};
+  const _alb=document.getElementById('addLegBtn'); if(_alb) _alb.onclick=()=>{ const n={name:'New section',route:'',km:5,d:2,sup:false,brk:S.defaultRest!==undefined?S.defaultRest:10,baseBrk:S.defaultRest!==undefined?S.defaultRest:10,asc:0,arrival:null,departure:null};
     n.walk=paceWalk(S.legs,n,S.paceMin); S.legs.splice(S.legs.length-1,0,n); markFinish(S.legs); save(); render(); };
   function resetRace(){ S.startActual=null; S.legs.forEach(l=>{ l.arrival=null; l.departure=null; }); markerSnap=null; S.markerSnap=null; if(window.__oxEdit)window.__oxEdit.clear(); if(window.__oxCollapsed)window.__oxCollapsed.clear(); save(); render(); tickClock(); }
   document.getElementById('resetBtn').onclick=()=>{ if(window.__oxEdit)window.__oxEdit.clear(); S=fresh(); save(); render(); };
