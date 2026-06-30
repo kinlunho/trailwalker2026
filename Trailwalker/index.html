@@ -22,10 +22,10 @@
   }
   #app-root *{box-sizing:border-box; margin:0; padding:0;}
   .wrap{max-width:560px; width:100%; box-sizing:border-box; margin:0 auto; padding:0 max(22px, env(safe-area-inset-right)) max(24px, calc(16px + env(safe-area-inset-bottom))) max(22px, env(safe-area-inset-left)); position:relative; z-index:1;}
-  .freeze-pane{position:sticky; top:0; z-index:20; background:var(--bg); padding-top:max(18px, env(safe-area-inset-top)); padding-bottom:10px; margin:0 calc(-1 * max(22px, env(safe-area-inset-right))) 0 calc(-1 * max(22px, env(safe-area-inset-left))); padding-left:max(22px, env(safe-area-inset-left)); padding-right:max(22px, env(safe-area-inset-right)); box-shadow:0 8px 16px -8px rgba(0,0,0,.35); border-bottom:1px solid var(--line);}
+  #app-root .freeze-pane{position:-webkit-sticky; position:sticky; top:0; z-index:20; background:var(--bg); padding-top:max(18px, env(safe-area-inset-top)); padding-bottom:10px; margin:0 calc(-1 * max(22px, env(safe-area-inset-right))) 0 calc(-1 * max(22px, env(safe-area-inset-left))); padding-left:max(22px, env(safe-area-inset-left)); padding-right:max(22px, env(safe-area-inset-right)); box-shadow:0 8px 16px -8px rgba(0,0,0,.35); border-bottom:1px solid var(--line);}
   .freeze-pane .hero{margin-bottom:10px;}
   .freeze-pane .tstrip{margin-bottom:0;}
-  .scroll-pane{padding-top:14px;}
+  #app-root .scroll-pane{padding-top:14px;}
   .topo{position:fixed; inset:0; z-index:0; opacity:.06; pointer-events:none;}
 
   .masthead{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px;}
