@@ -123,6 +123,9 @@
   .stat{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 11px; position:relative; cursor:help;}
   .stat .k{display:flex;align-items:center;gap:4px;}
   .stat .k::after{content:'?';display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;background:var(--line);color:var(--muted);font-size:9px;font-weight:700;flex-shrink:0;opacity:0.7;}
+  .stat .stat-detail{display:none;margin-top:6px;}
+  .stat:hover .stat-detail{display:block;}
+  .stat.expanded .stat-detail{display:block;}
   /* tooltip popup */
   .tip-overlay{display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.5);}
   .tip-overlay.show{display:flex;align-items:center;justify-content:center;padding:20px;}
@@ -130,6 +133,16 @@
   .tip-box h4{margin:0 0 8px;font-size:15px;color:var(--ink);}
   .tip-box p{margin:0;font-size:13px;color:var(--muted);line-height:1.6;}
   .tip-box .tip-close{margin-top:14px;display:block;text-align:center;font-size:13px;color:var(--lamp);cursor:pointer;padding:6px;}
+  .splits-popup{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;max-width:380px;width:100%;max-height:80vh;overflow-y:auto;}
+  .splits-popup h4{margin:0 0 12px;font-size:15px;color:var(--ink);}
+  .splits-popup table{width:100%;border-collapse:collapse;font-size:12px;}
+  .splits-popup th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);padding:4px 6px;border-bottom:1px solid var(--line);}
+  .splits-popup td{padding:6px 6px;border-bottom:1px solid var(--line);color:var(--ink);vertical-align:middle;}
+  .splits-popup tr:last-child td{border-bottom:none;}
+  .splits-popup .g{color:var(--ahead);font-weight:600;}
+  .splits-popup .r{color:var(--behind);font-weight:600;}
+  .splits-popup .tot{font-weight:700;font-size:13px;}
+  .splits-popup .close-btn{margin-top:14px;display:block;text-align:center;font-size:13px;color:var(--lamp);cursor:pointer;padding:6px;}
   .stat .k{font-size:10px; letter-spacing:.07em; text-transform:uppercase; color:var(--faint);}
   .stat .v{font-size:16px; font-weight:700; margin-top:3px;}
   .stat .v small{font-size:11px; color:var(--muted); font-weight:600;}
@@ -284,8 +297,8 @@
 
   <div class="stats">
     <div class="stat" data-tip="walking-speed"><div class="k">Walking speed</div><div class="v" id="speed">—</div></div>
-    <div class="stat"><div class="k" style="display:flex;justify-content:space-between"><span>Moving time</span><span id="movingDelta" style="font-size:10px;font-weight:700"></span></div><div class="v" id="moving">—</div><div id="movingBar" style="height:4px;border-radius:2px;background:var(--line);margin-top:5px;overflow:hidden"><div id="movingBarFill" style="height:100%;width:0%;border-radius:2px;transition:width .4s"></div></div><div id="movingPlan" style="font-size:10px;color:var(--faint);margin-top:3px"></div></div>
-    <div class="stat"><div class="k" style="display:flex;justify-content:space-between"><span>Rest time</span><span id="restingDelta" style="font-size:10px;font-weight:700"></span></div><div class="v" id="resting">—</div><div id="restingBar" style="height:4px;border-radius:2px;background:var(--line);margin-top:5px;overflow:hidden"><div id="restingBarFill" style="height:100%;width:0%;border-radius:2px;transition:width .4s"></div></div><div id="restingPlan" style="font-size:10px;color:var(--faint);margin-top:3px"></div></div>
+    <div class="stat" id="statMoving" style="cursor:pointer" title="Tap to see section splits"><div class="k"><span>Moving time</span></div><div class="v" id="moving">—</div><div id="movingDelta" style="font-size:10px;font-weight:700;margin-top:3px;min-height:14px"></div></div>
+    <div class="stat" id="statResting" style="cursor:pointer" title="Tap to see section splits"><div class="k"><span>Rest time</span></div><div class="v" id="resting">—</div><div id="restingDelta" style="font-size:10px;font-weight:700;margin-top:3px;min-height:14px"></div></div>
     <div class="stat" data-tip="distance-done"><div class="k">Distance done</div><div class="v" id="kmdone">—</div></div>
     <div class="stat" data-tip="need-pace"><div class="k">Need km/h · target</div><div class="v" id="reqpace">—</div></div>
     <div class="stat" data-tip="section-time"><div class="k">Section time</div><div class="v" id="buffer">—</div></div>
@@ -296,6 +309,14 @@
       <h4 id="tipTitle"></h4>
       <p id="tipBody"></p>
       <span class="tip-close" onclick="document.getElementById('tipOverlay').classList.remove('show')">Tap to close</span>
+    </div>
+  </div>
+
+  <div class="tip-overlay" id="splitsOverlay" onclick="this.classList.remove('show')">
+    <div class="splits-popup" onclick="event.stopPropagation()">
+      <h4>Section splits</h4>
+      <div id="splitsContent"></div>
+      <span class="close-btn" onclick="document.getElementById('splitsOverlay').classList.remove('show')">Close</span>
     </div>
   </div>
 
@@ -1191,6 +1212,54 @@
     {enableHighAccuracy:true,maximumAge:5000,timeout:15000});
   }
   // ─────────────────────────────────────────────────────────────────
+  function showSplitsPopup(){
+    const overlay=document.getElementById('splitsOverlay');
+    const content=document.getElementById('splitsContent');
+    if(!overlay||!content) return;
+    const c=compute();
+    const done=S.legs.filter(l=>l.arrival&&l.departure||(l.arrival&&l.finish));
+    if(!done.length){ content.innerHTML='<p style="color:var(--muted);font-size:13px">No completed sections yet.</p>'; overlay.classList.add('show'); return; }
+    let totalWalkPlan=0,totalWalkAct=0,totalRestPlan=0,totalRestAct=0;
+    const rows=done.map((l,idx)=>{
+      const i=S.legs.indexOf(l);
+      const dep=c.prevDep(i)||c.base;
+      const arr=new Date(l.arrival);
+      const walkAct=Math.round((arr-dep)/60000);
+      const walkPlan=l.walk;
+      const walkDiff=walkAct-walkPlan;
+      const restAct=l.departure?Math.round((new Date(l.departure)-arr)/60000):null;
+      const restPlan=l.brk;
+      const restDiff=restAct!=null?restAct-restPlan:null;
+      totalWalkPlan+=walkPlan; totalWalkAct+=walkAct;
+      if(restAct!=null){totalRestPlan+=restPlan; totalRestAct+=restAct;}
+      const wCls=walkDiff<=0?'g':'r';
+      const rCls=restDiff!=null?(restDiff<=0?'g':'r'):'';
+      const sign=v=>v>0?'+':v<0?'−':'';
+      const fmt=m=>{m=Math.abs(Math.round(m));return Math.floor(m/60)+'h'+String(m%60).padStart(2,'0')+'m';};
+      return '<tr>'+
+        '<td style="max-width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+l.name+'</td>'+
+        '<td>'+fmt(walkAct)+'</td>'+
+        '<td class="'+wCls+'">'+sign(walkDiff)+fmt(walkDiff)+'</td>'+
+        '<td>'+(restAct!=null?fmt(restAct):'—')+'</td>'+
+        '<td class="'+rCls+'">'+(restDiff!=null?sign(restDiff)+fmt(restDiff):'—')+'</td>'+
+        '</tr>';
+    });
+    const totalWalkDiff=totalWalkAct-totalWalkPlan;
+    const totalRestDiff=totalRestAct-totalRestPlan;
+    const fmt=m=>{m=Math.abs(Math.round(m));return Math.floor(m/60)+'h'+String(m%60).padStart(2,'0')+'m';};
+    const sign=v=>v>0?'+':v<0?'−':'';
+    rows.push('<tr class="tot" style="background:var(--bg2)">'+
+      '<td>TOTAL</td>'+
+      '<td>'+fmt(totalWalkAct)+'</td>'+
+      '<td class="'+(totalWalkDiff<=0?'g':'r')+'">'+sign(totalWalkDiff)+fmt(totalWalkDiff)+'</td>'+
+      '<td>'+fmt(totalRestAct)+'</td>'+
+      '<td class="'+(totalRestDiff<=0?'g':'r')+'">'+sign(totalRestDiff)+fmt(totalRestDiff)+'</td>'+
+      '</tr>');
+    content.innerHTML='<table>'+
+      '<thead><tr><th>Section</th><th>Walk</th><th>±walk</th><th>Rest</th><th>±rest</th></tr></thead>'+
+      '<tbody>'+rows.join('')+'</tbody></table>';
+    overlay.classList.add('show');
+  }
   function mapLink(){
     const routeMap='https://www.google.com/maps/d/viewer?mid=17KKPiqSM3PdpfHOTeC347SdbvtmKTa4';
     if(markerSnap&&markerSnap.lat&&markerSnap.lng){
@@ -1526,22 +1595,14 @@
       const mPct=planWalkDone>0?Math.min(130,c.liveMoving/planWalkDone*100):0;
       const mAhead=c.liveMoving<=planWalkDone;
       const mDelta=planWalkDone>0?Math.round(c.liveMoving-planWalkDone):0;
-      const mFill=document.getElementById('movingBarFill');
       const mDeltaEl=document.getElementById('movingDelta');
-      const mPlanEl=document.getElementById('movingPlan');
-      if(mFill){mFill.style.width=Math.min(100,mPct)+'%';mFill.style.background=mAhead?'var(--ahead)':'var(--behind)';}
-      if(mDeltaEl&&planWalkDone>0){mDeltaEl.textContent=(mDelta<=0?'▲':'▼')+durTxt(Math.abs(mDelta));mDeltaEl.style.color=mAhead?'var(--ahead)':'var(--behind)';}
-      if(mPlanEl&&planWalkDone>0) mPlanEl.textContent='plan '+durTxt(planWalkDone);
+      if(mDeltaEl&&planWalkDone>0){mDeltaEl.textContent=(mDelta<=0?'▲ ':'▼ ')+durTxt(Math.abs(mDelta))+' vs plan';mDeltaEl.style.color=mAhead?'var(--ahead)':'var(--behind)';} else if(mDeltaEl) mDeltaEl.textContent='';
       // rest bar
       const rPct=planRestDone>0?Math.min(130,c.liveRestTotal/planRestDone*100):0;
       const rAhead=c.liveRestTotal<=planRestDone;
       const rDelta=planRestDone>0?Math.round(c.liveRestTotal-planRestDone):0;
-      const rFill=document.getElementById('restingBarFill');
       const rDeltaEl=document.getElementById('restingDelta');
-      const rPlanEl=document.getElementById('restingPlan');
-      if(rFill){rFill.style.width=Math.min(100,rPct)+'%';rFill.style.background=rAhead?'var(--ahead)':'var(--behind)';}
-      if(rDeltaEl&&planRestDone>0){rDeltaEl.textContent=(rDelta<=0?'▲':'▼')+durTxt(Math.abs(rDelta));rDeltaEl.style.color=rAhead?'var(--ahead)':'var(--behind)';}
-      if(rPlanEl&&planRestDone>0) rPlanEl.textContent='plan '+durTxt(planRestDone);
+      if(rDeltaEl&&planRestDone>0){rDeltaEl.textContent=(rDelta<=0?'▲ ':'▼ ')+durTxt(Math.abs(rDelta))+' vs plan';rDeltaEl.style.color=rAhead?'var(--ahead)':'var(--behind)';} else if(rDeltaEl) rDeltaEl.textContent='';
     }
     const dispKm=markerSnap&&c.begun?markerSnap.km:c.kmDone;
     const toGo=Math.round((c.TOTAL-dispKm)*10)/10;
@@ -1955,6 +2016,10 @@
     "need-pace":    {t:"Need km/h",    b:"TARGET: minimum average speed needed right now to finish within your 32h goal, factoring in all remaining rest stops. Switches to PROJ once past target time, showing pace needed to hold your current projected finish."},
     "section-time": {t:"Section time", b:"Time spent walking in the current section. Green triangle = ahead of section plan. Red triangle = behind plan. Compare with the planned walk time shown in the section card below."},
   };
+  ['statMoving','statResting'].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    el.addEventListener('click',showSplitsPopup);
+  });
   document.querySelectorAll('.stat[data-tip]').forEach(el=>{
     el.addEventListener('click',()=>{
       const tip=TIPS[el.dataset.tip]; if(!tip) return;
