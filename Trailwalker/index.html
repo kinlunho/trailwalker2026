@@ -314,11 +314,6 @@
   </div>
 
   <div class="tstrip" id="tstrip"></div>
-  <div id="cutoffStrip" style="display:none;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:9px 13px;margin-top:8px;font-size:12.5px">
-    <span style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)">Next cutoff</span>
-    <span id="cutoffLegName" style="color:var(--muted)"></span>
-    <span id="cutoffBufferVal" style="margin-left:auto;font-weight:800"></span>
-  </div>
   </div>
 
   <div class="scroll-pane">
@@ -1993,21 +1988,6 @@
       '<div class="verdict '+(ahead?'ahead':'behindc')+'"><div class="sm">'+(ahead?'ahead of plan':'behind plan')+'</div>'+
       '<div class="big">'+(ahead?'▲ ':'▼ ')+durTxt(Math.abs(c.vsTargetMin))+'</div></div>';
     document.getElementById('tstrip').onclick=null; document.getElementById('tstrip').style.cursor='default';
-    const cutStrip=document.getElementById('cutoffStrip');
-    if(cutStrip){
-      if(c.begun && c.nextCutIdx>=0 && c.nextCutBufferMin!=null){
-        cutStrip.style.display='flex';
-        document.getElementById('cutoffLegName').textContent=c.nextCutLegName;
-        const buf=c.nextCutBufferMin;
-        const safe=buf>=60, warn=buf>=20&&buf<60, danger=buf<20;
-        const col=safe?'var(--ahead)':warn?'var(--lamp)':'var(--behind)';
-        const bufEl2=document.getElementById('cutoffBufferVal');
-        bufEl2.style.color=col;
-        bufEl2.textContent=(buf>=0?'+':'')+durTxt(buf)+(buf<0?' OVER':' to spare');
-      } else {
-        cutStrip.style.display='none';
-      }
-    }
     const v17=document.getElementById('v17strip');
     if(c.cum17>0){ const a17=c.vs17Min<=0; v17.style.display='flex';
       v17.innerHTML='<span class="k17">vs 2017</span><span class="t17v">you '+durTxt(c.mv17)+' · ’17 '+durTxt(c.cum17)+'</span><span class="'+(a17?'ahead':'behindc')+'" style="margin-left:auto;font-weight:800">'+(a17?'▲ ':'▼ ')+durTxt(Math.abs(c.vs17Min))+'</span>';
@@ -2151,7 +2131,16 @@
           if(l.t17>0){ const d7=mv-l.t17; cmp+='<span>vs ’17 <b class="'+(d7<=0?'cmpA':'cmpB')+'">'+signTxt(d7)+'</b></span>'; }
           splits+='<div class="splits cmp">'+cmp+'</div>'; }
       }
-      const cutRt = l.cutM>0 ? '<div class="plan" style="margin-top:6px;border-top:1px solid var(--line);padding-top:5px;">cut-off</div><div class="act" style="font-size:13px;color:#d97b7b\">'+clock(new Date(c.base.getTime()+l.cutM*MS))+'</div>' : '';
+      let cutRt='';
+      if(l.cutM>0){
+        cutRt='<div class="plan" style="margin-top:6px;border-top:1px solid var(--line);padding-top:5px;">cut-off</div><div class="act" style="font-size:13px;color:#d97b7b">'+clock(new Date(c.base.getTime()+l.cutM*MS))+'</div>';
+        if(c.begun && i===c.nextCutIdx && c.nextCutBufferMin!=null){
+          const buf=c.nextCutBufferMin;
+          const safe=buf>=60, warn=buf>=20&&buf<60;
+          const col=safe?'var(--ahead)':warn?'var(--lamp)':'var(--behind)';
+          cutRt+='<div style="font-size:11px;font-weight:700;margin-top:3px;color:'+col+'">'+(buf>=0?'+':'')+durTxt(buf)+(buf<0?' over':' buffer')+'</div>';
+        }
+      }
       el.innerHTML=
         '<div class="node"><span class="stick"></span><span class="ring"></span></div>'+
         '<div class="body"><div class="name">'+l.name+' '+stars+chip+'</div>'+
