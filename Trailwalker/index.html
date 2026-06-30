@@ -1894,7 +1894,40 @@
     const trail=document.getElementById('trail'); trail.innerHTML='';
     const editing = window.__oxEdit || (window.__oxEdit=new Set());
     let frontierIdx=-1; S.legs.forEach((l,i)=>{ if(l.arrival) frontierIdx=i; });
+    const groupOpen = window.__oxGroupOpen || (window.__oxGroupOpen=new Set());
+    // find the longest leading run of done sections (sections 0..k-1 all done)
+    let doneRunEnd=-1;
+    for(let i=0;i<S.legs.length;i++){
+      const l=S.legs[i];
+      const isActive=(c.action==='arrive'&&c.actionIdx===i)||(c.action==='leave'&&c.actionIdx===i)||(i===c.nextIdx);
+      const done=!!l.arrival&&(!!l.departure||l.finish);
+      if(done&&!isActive) doneRunEnd=i; else break;
+    }
+    const groupSize=doneRunEnd+1; // number of leading done sections
+    const showGroupSummary = groupSize>=4 && !groupOpen.has('grp');
+    const groupWasExpanded = groupSize>=4 && groupOpen.has('grp');
+    if(showGroupSummary){
+      const grpEl=document.createElement('div');
+      grpEl.className='leg';
+      grpEl.style.cursor='pointer';
+      const totalKm=S.legs.slice(0,groupSize).reduce((a,l)=>a+l.km,0);
+      grpEl.innerHTML='<div class="node"><span class="stick"></span><span class="ring" style="background:var(--ahead);border-color:var(--ahead)"></span></div>'+
+        '<div class="body"><div class="name">'+groupSize+' sections completed <span style="color:var(--faint);font-size:12px;font-weight:400">\u00b7 '+Math.round(totalKm*10)/10+'km \u00b7 tap to expand</span></div></div>'+
+        '<div class="rt"></div>';
+      grpEl.onclick=()=>{ groupOpen.add('grp'); render(); };
+      trail.appendChild(grpEl);
+    } else if(groupWasExpanded){
+      const collapseRow=document.createElement('div');
+      collapseRow.style.cssText='padding:6px 0;text-align:center';
+      const btn=document.createElement('button');
+      btn.className='lnk';
+      btn.textContent='\u2191 Collapse '+groupSize+' completed sections';
+      btn.onclick=()=>{ groupOpen.delete('grp'); render(); };
+      collapseRow.appendChild(btn);
+      trail.appendChild(collapseRow);
+    }
     S.legs.forEach((l,i)=>{
+      if(showGroupSummary && i<doneRunEnd) return; // hide all but the last of the grouped run
       const arrived=!!l.arrival, departed=!!l.departure;
       const isWalk=(c.action==='arrive'&&c.actionIdx===i);
       const isRest=(c.action==='leave'&&c.actionIdx===i);
@@ -2504,7 +2537,7 @@
   document.getElementById('testSmsBtn').onclick=()=>{ sendSMS('\ud83c\udfc3 Trailwalker 2026 test SMS — notifications are working!'); };
   const _alb=document.getElementById('addLegBtn'); if(_alb) _alb.onclick=()=>{ const n={name:'New section',route:'',km:5,d:2,sup:false,brk:S.defaultRest!==undefined?S.defaultRest:10,baseBrk:S.defaultRest!==undefined?S.defaultRest:10,asc:0,arrival:null,departure:null};
     n.walk=paceWalk(S.legs,n,S.paceMin); S.legs.splice(S.legs.length-1,0,n); markFinish(S.legs); save(); render(); };
-  function resetRace(){ S.startActual=null; S.legs.forEach(l=>{ l.arrival=null; l.departure=null; }); markerSnap=null; S.markerSnap=null; if(window.__oxEdit)window.__oxEdit.clear(); if(window.__oxCollapsed)window.__oxCollapsed.clear(); save(); render(); tickClock(); }
+  function resetRace(){ S.startActual=null; S.legs.forEach(l=>{ l.arrival=null; l.departure=null; }); markerSnap=null; S.markerSnap=null; if(window.__oxEdit)window.__oxEdit.clear(); if(window.__oxCollapsed)window.__oxCollapsed.clear(); if(window.__oxGroupOpen)window.__oxGroupOpen.clear(); save(); render(); tickClock(); }
   document.getElementById('resetRaceTimesBtn').onclick=()=>{
     const st=document.getElementById('resetRaceStatus');
     if(!confirm('Reset all race times? This clears your start time and every section arrival/departure, but keeps your route and plan. This cannot be undone.')) return;
