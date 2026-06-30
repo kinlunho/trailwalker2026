@@ -133,15 +133,21 @@
   .tip-box h4{margin:0 0 8px;font-size:15px;color:var(--ink);}
   .tip-box p{margin:0;font-size:13px;color:var(--muted);line-height:1.6;}
   .tip-box .tip-close{margin-top:14px;display:block;text-align:center;font-size:13px;color:var(--lamp);cursor:pointer;padding:6px;}
-  .splits-popup{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;max-width:380px;width:100%;max-height:80vh;overflow-y:auto;}
-  .splits-popup h4{margin:0 0 12px;font-size:15px;color:var(--ink);}
+  .splits-popup{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;max-width:420px;width:100%;max-height:85vh;overflow-y:auto;}
+  .splits-popup h4{margin:0 0 10px;font-size:15px;color:var(--ink);}
+  .splits-tabs{display:flex;gap:6px;margin-bottom:12px;}
+  .splits-tab{font:inherit;font-size:12px;font-weight:600;padding:5px 14px;border-radius:8px;border:1px solid var(--line);background:var(--bg2);color:var(--muted);cursor:pointer;}
+  .splits-tab.active{background:var(--lamp);color:#1a1206;border-color:var(--lamp);}
   .splits-popup table{width:100%;border-collapse:collapse;font-size:12px;}
-  .splits-popup th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);padding:4px 6px;border-bottom:1px solid var(--line);}
-  .splits-popup td{padding:6px 6px;border-bottom:1px solid var(--line);color:var(--ink);vertical-align:middle;}
+  .splits-popup th{text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);padding:5px 6px;border-bottom:1px solid var(--line);}
+  .splits-popup th:first-child{text-align:left;}
+  .splits-popup td{padding:7px 6px;border-bottom:1px solid var(--line);color:var(--ink);vertical-align:middle;text-align:right;}
+  .splits-popup td:first-child{text-align:left;font-size:11px;color:var(--muted);}
   .splits-popup tr:last-child td{border-bottom:none;}
-  .splits-popup .g{color:var(--ahead);font-weight:600;}
-  .splits-popup .r{color:var(--behind);font-weight:600;}
-  .splits-popup .tot{font-weight:700;font-size:13px;}
+  .splits-popup .g{color:var(--ahead);font-weight:700;}
+  .splits-popup .r{color:var(--behind);font-weight:700;}
+  .splits-popup .tot td{font-weight:700;font-size:13px;background:var(--bg2);color:var(--ink);}
+  .splits-popup .tot td:first-child{color:var(--ink);}
   .splits-popup .close-btn{margin-top:14px;display:block;text-align:center;font-size:13px;color:var(--lamp);cursor:pointer;padding:6px;}
   .stat .k{font-size:10px; letter-spacing:.07em; text-transform:uppercase; color:var(--faint);}
   .stat .v{font-size:16px; font-weight:700; margin-top:3px;}
@@ -297,8 +303,8 @@
 
   <div class="stats">
     <div class="stat" data-tip="walking-speed"><div class="k">Walking speed</div><div class="v" id="speed">—</div></div>
-    <div class="stat" id="statMoving" style="cursor:pointer" title="Tap to see section splits"><div class="k"><span>Moving time</span></div><div class="v" id="moving">—</div><div id="movingDelta" style="font-size:10px;font-weight:700;margin-top:3px;min-height:14px"></div></div>
-    <div class="stat" id="statResting" style="cursor:pointer" title="Tap to see section splits"><div class="k"><span>Rest time</span></div><div class="v" id="resting">—</div><div id="restingDelta" style="font-size:10px;font-weight:700;margin-top:3px;min-height:14px"></div></div>
+    <div class="stat" id="statMoving" style="cursor:pointer" title="Tap to see section splits"><div class="k"><span>Moving time</span></div><div class="v" id="moving">—</div></div>
+    <div class="stat" id="statResting" style="cursor:pointer" title="Tap to see section splits"><div class="k"><span>Rest time</span></div><div class="v" id="resting">—</div></div>
     <div class="stat" data-tip="distance-done"><div class="k">Distance done</div><div class="v" id="kmdone">—</div></div>
     <div class="stat" data-tip="need-pace"><div class="k">Need km/h · target</div><div class="v" id="reqpace">—</div></div>
     <div class="stat" data-tip="section-time"><div class="k">Section time</div><div class="v" id="buffer">—</div></div>
@@ -315,6 +321,10 @@
   <div class="tip-overlay" id="splitsOverlay" onclick="this.classList.remove('show')">
     <div class="splits-popup" onclick="event.stopPropagation()">
       <h4>Section splits</h4>
+      <div class="splits-tabs">
+        <button class="splits-tab active" id="tabWalk" onclick="window._splitsTab('walk')">Walk</button>
+        <button class="splits-tab" id="tabRest" onclick="window._splitsTab('rest')">Rest</button>
+      </div>
       <div id="splitsContent"></div>
       <span class="close-btn" onclick="document.getElementById('splitsOverlay').classList.remove('show')">Close</span>
     </div>
@@ -1212,52 +1222,73 @@
     {enableHighAccuracy:true,maximumAge:5000,timeout:15000});
   }
   // ─────────────────────────────────────────────────────────────────
+  window._splitsData=null;
+  window._splitsTab=function(tab){
+    document.getElementById('tabWalk').classList.toggle('active',tab==='walk');
+    document.getElementById('tabRest').classList.toggle('active',tab==='rest');
+    window._splitsActiveTab=tab;
+    if(window._splitsData) window._renderSplitsTable(window._splitsData,tab);
+  };
+  window._renderSplitsTable=function(data,tab){
+    const content=document.getElementById('splitsContent'); if(!content) return;
+    const fmt=m=>{m=Math.abs(Math.round(m));return Math.floor(m/60)+'h'+String(m%60).padStart(2,'0')+'m';};
+    const sign=v=>v>0?'+':v<0?'−':'';
+    const cls=v=>v<=0?'g':'r';
+    let totalPlan=0,totalAct=0,totalCum=0;
+    if(tab==='walk'){
+      const rows=data.map(d=>{
+        totalPlan+=d.walkPlan; totalAct+=d.walkAct; totalCum+=d.walkAct;
+        const diff=d.walkAct-d.walkPlan;
+        return '<tr>'+
+          '<td>'+d.name+'</td>'+
+          '<td>'+fmt(d.walkPlan)+'</td>'+
+          '<td>'+fmt(d.walkAct)+'</td>'+
+          '<td class="'+cls(diff)+'">'+sign(diff)+fmt(diff)+'</td>'+
+          '</tr>';
+      });
+      const td=totalAct-totalPlan;
+      rows.push('<tr class="tot"><td>Total</td><td>'+fmt(totalPlan)+'</td><td>'+fmt(totalAct)+'</td><td class="'+cls(td)+'">'+sign(td)+fmt(td)+'</td></tr>');
+      content.innerHTML='<table><thead><tr><th>Section</th><th>Planned</th><th>Actual</th><th>Split</th></tr></thead><tbody>'+rows.join('')+'</tbody></table>';
+    } else {
+      const rows=data.filter(d=>d.restPlan>0||d.restAct!=null).map(d=>{
+        if(d.restAct!=null){totalPlan+=d.restPlan; totalAct+=d.restAct;}
+        const diff=d.restAct!=null?d.restAct-d.restPlan:null;
+        return '<tr>'+
+          '<td>'+d.name+'</td>'+
+          '<td>'+fmt(d.restPlan)+'</td>'+
+          '<td>'+(d.restAct!=null?fmt(d.restAct):'walking')+'</td>'+
+          '<td>'+(diff!=null?'<span class="'+cls(diff)+'">'+sign(diff)+fmt(diff)+'</span>':'—')+'</td>'+
+          '</tr>';
+      });
+      const td=totalAct-totalPlan;
+      if(rows.length){
+        rows.push('<tr class="tot"><td>Total</td><td>'+fmt(totalPlan)+'</td><td>'+fmt(totalAct)+'</td><td class="'+cls(td)+'">'+sign(td)+fmt(td)+'</td></tr>');
+      }
+      content.innerHTML=rows.length
+        ?'<table><thead><tr><th>Section</th><th>Planned</th><th>Actual</th><th>Split</th></tr></thead><tbody>'+rows.join('')+'</tbody></table>'
+        :'<p style="color:var(--muted);font-size:13px;margin:0">No rest stops completed yet.</p>';
+    }
+  };
   function showSplitsPopup(){
     const overlay=document.getElementById('splitsOverlay');
     const content=document.getElementById('splitsContent');
     if(!overlay||!content) return;
     const c=compute();
-    const done=S.legs.filter(l=>l.arrival&&l.departure||(l.arrival&&l.finish));
+    const done=S.legs.filter(l=>l.arrival);
     if(!done.length){ content.innerHTML='<p style="color:var(--muted);font-size:13px">No completed sections yet.</p>'; overlay.classList.add('show'); return; }
-    let totalWalkPlan=0,totalWalkAct=0,totalRestPlan=0,totalRestAct=0;
-    const rows=done.map((l,idx)=>{
+    window._splitsData=done.map(l=>{
       const i=S.legs.indexOf(l);
       const dep=c.prevDep(i)||c.base;
       const arr=new Date(l.arrival);
       const walkAct=Math.round((arr-dep)/60000);
-      const walkPlan=l.walk;
-      const walkDiff=walkAct-walkPlan;
       const restAct=l.departure?Math.round((new Date(l.departure)-arr)/60000):null;
-      const restPlan=l.brk;
-      const restDiff=restAct!=null?restAct-restPlan:null;
-      totalWalkPlan+=walkPlan; totalWalkAct+=walkAct;
-      if(restAct!=null){totalRestPlan+=restPlan; totalRestAct+=restAct;}
-      const wCls=walkDiff<=0?'g':'r';
-      const rCls=restDiff!=null?(restDiff<=0?'g':'r'):'';
-      const sign=v=>v>0?'+':v<0?'−':'';
-      const fmt=m=>{m=Math.abs(Math.round(m));return Math.floor(m/60)+'h'+String(m%60).padStart(2,'0')+'m';};
-      return '<tr>'+
-        '<td style="max-width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+l.name+'</td>'+
-        '<td>'+fmt(walkAct)+'</td>'+
-        '<td class="'+wCls+'">'+sign(walkDiff)+fmt(walkDiff)+'</td>'+
-        '<td>'+(restAct!=null?fmt(restAct):'—')+'</td>'+
-        '<td class="'+rCls+'">'+(restDiff!=null?sign(restDiff)+fmt(restDiff):'—')+'</td>'+
-        '</tr>';
+      return {name:l.name,walkPlan:l.walk,walkAct,restPlan:l.brk,restAct};
     });
-    const totalWalkDiff=totalWalkAct-totalWalkPlan;
-    const totalRestDiff=totalRestAct-totalRestPlan;
-    const fmt=m=>{m=Math.abs(Math.round(m));return Math.floor(m/60)+'h'+String(m%60).padStart(2,'0')+'m';};
-    const sign=v=>v>0?'+':v<0?'−':'';
-    rows.push('<tr class="tot" style="background:var(--bg2)">'+
-      '<td>TOTAL</td>'+
-      '<td>'+fmt(totalWalkAct)+'</td>'+
-      '<td class="'+(totalWalkDiff<=0?'g':'r')+'">'+sign(totalWalkDiff)+fmt(totalWalkDiff)+'</td>'+
-      '<td>'+fmt(totalRestAct)+'</td>'+
-      '<td class="'+(totalRestDiff<=0?'g':'r')+'">'+sign(totalRestDiff)+fmt(totalRestDiff)+'</td>'+
-      '</tr>');
-    content.innerHTML='<table>'+
-      '<thead><tr><th>Section</th><th>Walk</th><th>±walk</th><th>Rest</th><th>±rest</th></tr></thead>'+
-      '<tbody>'+rows.join('')+'</tbody></table>';
+    const tab=window._splitsActiveTab||'walk';
+    window._renderSplitsTable(window._splitsData,tab);
+    // set active tab UI
+    document.getElementById('tabWalk').classList.toggle('active',tab==='walk');
+    document.getElementById('tabRest').classList.toggle('active',tab==='rest');
     overlay.classList.add('show');
   }
   function mapLink(){
@@ -1595,14 +1626,10 @@
       const mPct=planWalkDone>0?Math.min(130,c.liveMoving/planWalkDone*100):0;
       const mAhead=c.liveMoving<=planWalkDone;
       const mDelta=planWalkDone>0?Math.round(c.liveMoving-planWalkDone):0;
-      const mDeltaEl=document.getElementById('movingDelta');
-      if(mDeltaEl&&planWalkDone>0){mDeltaEl.textContent=(mDelta<=0?'▲ ':'▼ ')+durTxt(Math.abs(mDelta))+' vs plan';mDeltaEl.style.color=mAhead?'var(--ahead)':'var(--behind)';} else if(mDeltaEl) mDeltaEl.textContent='';
       // rest bar
       const rPct=planRestDone>0?Math.min(130,c.liveRestTotal/planRestDone*100):0;
       const rAhead=c.liveRestTotal<=planRestDone;
       const rDelta=planRestDone>0?Math.round(c.liveRestTotal-planRestDone):0;
-      const rDeltaEl=document.getElementById('restingDelta');
-      if(rDeltaEl&&planRestDone>0){rDeltaEl.textContent=(rDelta<=0?'▲ ':'▼ ')+durTxt(Math.abs(rDelta))+' vs plan';rDeltaEl.style.color=rAhead?'var(--ahead)':'var(--behind)';} else if(rDeltaEl) rDeltaEl.textContent='';
     }
     const dispKm=markerSnap&&c.begun?markerSnap.km:c.kmDone;
     const toGo=Math.round((c.TOTAL-dispKm)*10)/10;
