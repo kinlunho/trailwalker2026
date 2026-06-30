@@ -393,10 +393,19 @@
     </div>
     <div class="tp">
       <h3>Heat factor</h3>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Slows your pace during the hottest part of the day, peaks at midday, zero overnight. Especially relevant for exposed climbs like Needle Hill in section 7.</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Walking is slower in heat — your body works harder to cool down, which reduces the pace you can sustain. This adds time to sections based on what hour you are projected to walk through them. A section crossed at 1pm gets the full slowdown; the same section crossed at 6am or 9pm gets none.</div>
       <div class="field"><label for="heatToggle">Apply heat factor</label><input type="checkbox" id="heatToggle" style="width:20px;height:20px"></div>
       <div class="field"><label for="heatPeakInput">Peak slowdown (%)</label><input type="number" id="heatPeakInput" min="0" max="30" step="1" value="8"></div>
-      <div style="font-size:11px;color:var(--faint);margin-top:-2px">Peak slowdown applies around 1-3pm. Tapers to zero before sunrise and after sunset.</div>
+      <div style="font-size:11px;color:var(--faint);margin:-2px 0 12px">This is how much slower you walk at the hottest point of the day (around 1-3pm), tapering to zero before sunrise and after sunset — not a flat slowdown applied all day.</div>
+      <div id="heatCurveWrap" style="display:none">
+        <svg id="heatCurveSvg" viewBox="0 0 300 70" style="width:100%;height:60px;display:block;margin-bottom:6px"></svg>
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--faint);margin-bottom:14px">
+          <span>6am</span><span>10am</span><span>2pm</span><span>6pm</span><span>10pm</span>
+        </div>
+        <div style="font-size:12px;font-weight:700;margin-bottom:6px">Sections affected by heat</div>
+        <div id="heatImpactList" style="font-size:12px;color:var(--muted)"></div>
+        <div style="font-size:11px;color:var(--faint);margin-top:8px;border-top:1px solid var(--line);padding-top:8px" id="heatTotalImpact"></div>
+      </div>
     </div>
     <div class="tp">
       <h3>Default rest times</h3>
@@ -2015,6 +2024,7 @@
     const _csl=document.getElementById('climbSlider'); if(_csl&&!_csl.matches(':focus')){ _csl.value=S.climbAdj||0; const cp=document.getElementById('climbPct'); if(cp) cp.textContent=((S.climbAdj||0)>=0?'+':'')+(S.climbAdj||0)+'%'; }
     const _dsl=document.getElementById('descSlider'); if(_dsl&&!_dsl.matches(':focus')){ _dsl.value=S.descAdj||0; const dp=document.getElementById('descPct'); if(dp) dp.textContent=((S.descAdj||0)>=0?'+':'')+(S.descAdj||0)+'%'; }
     const _htog=document.getElementById('heatToggle'); if(_htog) _htog.checked=!!S.heatOn;
+    renderHeatPreview();
     const _hpk=document.getElementById('heatPeakInput'); if(_hpk&&!_hpk.matches(':focus')) _hpk.value=S.heatPeak||8;
     const _drI=document.getElementById('defaultRestInput'); if(_drI&&!_drI.matches(':focus')) _drI.value=S.defaultRest!==undefined?S.defaultRest:10;
     const _sbI=document.getElementById('supportBonusInput'); if(_sbI&&!_sbI.matches(':focus')) _sbI.value=S.supportRestBonus!==undefined?S.supportRestBonus:15;
@@ -2219,7 +2229,44 @@
   function reapplyClimbDescHeat(){
     if(!S.legs||!S.legs.length) return;
     applyClimbDescHeat(S.legs,S.climbAdj||0,S.descAdj||0,S.heatOn,S.heatPeak||8,D(S.startPlanned)||D(S.startActual));
-    save(); render();
+    save(); render(); renderHeatPreview();
+  }
+  function renderHeatPreview(){
+    const wrap=document.getElementById('heatCurveWrap');
+    if(!wrap) return;
+    if(!S.heatOn){ wrap.style.display='none'; return; }
+    wrap.style.display='block';
+    // draw heat curve 6am-10pm
+    const svg=document.getElementById('heatCurveSvg');
+    if(svg){
+      let pts=[];
+      for(let h=6;h<=22;h+=0.5){
+        const d=new Date(2026,0,1,Math.floor(h),(h%1)*60);
+        const hf=heatFactorAt(d);
+        const x=((h-6)/16)*300;
+        const y=60-hf*50;
+        pts.push(x+','+y);
+      }
+      const path='M'+pts.join(' L');
+      svg.innerHTML='<path d="'+path+'" fill="none" stroke="var(--behind)" stroke-width="2"/>'+
+        '<line x1="0" y1="60" x2="300" y2="60" stroke="var(--line)" stroke-width="1"/>';
+    }
+    // compute per-section impact: walk time with heat off vs heat on
+    const legsOff=S.legs.map(l=>({...l}));
+    applyClimbDescHeat(legsOff,S.climbAdj||0,S.descAdj||0,false,0,D(S.startPlanned)||D(S.startActual));
+    const list=document.getElementById('heatImpactList');
+    const totalEl=document.getElementById('heatTotalImpact');
+    if(list){
+      let totalAdded=0,affected=0;
+      const rows=S.legs.map((l,i)=>{
+        const added=l.walk-legsOff[i].walk;
+        if(added>0){ totalAdded+=added; affected++; }
+        return added>0?'<div style="display:flex;justify-content:space-between;padding:3px 0">'+
+          '<span>'+l.name+'</span><span style="color:var(--behind)">+'+added+'m</span></div>':'';
+      }).filter(Boolean);
+      list.innerHTML=rows.length?rows.join(''):'<div style="color:var(--faint)">No sections currently fall in daylight heat hours.</div>';
+      if(totalEl) totalEl.textContent=affected>0?('Adds '+totalAdded+'m total across '+affected+' section'+(affected>1?'s':'')+' — sections at night or early morning are unaffected.'):'';
+    }
   }
   const _climbSl=document.getElementById('climbSlider');
   const _descSl=document.getElementById('descSlider');
