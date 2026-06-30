@@ -4,7 +4,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json">
-<style>*,*::before,*::after{box-sizing:border-box;} html{margin:0;padding:0;width:100%;overflow-x:hidden;background:#10161c;} body{margin:0;padding:0;width:100%;overflow-x:hidden;background:#10161c;padding-top:env(safe-area-inset-top);}</style>
+<style>*,*::before,*::after{box-sizing:border-box;} html{margin:0;padding:0;width:100%;background:#10161c;} body{margin:0;padding:0;width:100%;background:#10161c;padding-top:env(safe-area-inset-top);}</style>
 <div id="app-root">
 <div class="arrival-toast" id="arrToast"><div id="arrMsg"></div><div class="tsub" id="arrSub"></div></div>
 <style>
@@ -22,11 +22,11 @@
   }
   #app-root *{box-sizing:border-box; margin:0; padding:0;}
   .wrap{max-width:560px; width:100%; box-sizing:border-box; margin:0 auto; padding:0 max(22px, env(safe-area-inset-right)) max(24px, calc(16px + env(safe-area-inset-bottom))) max(22px, env(safe-area-inset-left)); position:relative; z-index:1;}
-  #app-root .freeze-pane{position:-webkit-sticky; position:sticky; top:0; z-index:20; background:var(--bg); padding-top:max(18px, env(safe-area-inset-top)); padding-bottom:10px; margin:0 calc(-1 * max(22px, env(safe-area-inset-right))) 0 calc(-1 * max(22px, env(safe-area-inset-left))); padding-left:max(22px, env(safe-area-inset-left)); padding-right:max(22px, env(safe-area-inset-right)); box-shadow:0 8px 16px -8px rgba(0,0,0,.35); border-bottom:1px solid var(--line);}
+  #app-root .freeze-pane{position:-webkit-sticky; position:sticky; top:0; z-index:20; background:var(--bg); padding-top:max(18px, env(safe-area-inset-top)); padding-bottom:10px; padding-left:max(22px, env(safe-area-inset-left)); padding-right:max(22px, env(safe-area-inset-right)); box-shadow:0 8px 16px -8px rgba(0,0,0,.35); border-bottom:1px solid var(--line);}
   .freeze-pane .hero{margin-bottom:10px;}
   .freeze-pane .tstrip{margin-bottom:0;}
   #app-root .scroll-pane{padding-top:14px;}
-  .topo{position:fixed; inset:0; z-index:0; opacity:.06; pointer-events:none;}
+  .topo{position:fixed; inset:0; z-index:0; opacity:.06; pointer-events:none; overflow:hidden;}
 
   .masthead{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px;}
   .masthead h1{font-size:15px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;}
