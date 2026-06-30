@@ -386,6 +386,7 @@
     <div class="field" id="actualStartField" style="display:none"><label for="actualStartInput">Actual start</label><input type="datetime-local" id="actualStartInput"></div>
     <div class="field"><label for="cutoffInput">Cutoff (hours)</label><input type="number" id="cutoffInput" min="1" step="1"></div>
     <div id="planEdit" style="display:none"></div>
+    <button id="addLegBtn" style="display:none">+ Add section</button>
     <h3 style="margin-top:16px">Email notifications</h3>
     <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Get email alerts on start, each checkpoint departure and arrival. Powered by EmailJS (free).</div>
     <div class="field"><label for="teamNum">Team number</label><input type="text" id="teamNum" placeholder="0565" style="width:80px;text-align:left"></div>
@@ -523,7 +524,7 @@
   function defaultStart(){ return new Date(2026,10,20,9,0,0,0).toISOString(); }
   function fresh(){ const legs=DEFAULT_LEGS.map(l=>({...l, arrival:null, departure:null}));
     applyPace(legs,DEF_PACE); markFinish(legs);
-    return {startPlanned:defaultStart(), startActual:null, cutoffH:48, targetH:DEF_TARGET, paceMin:DEF_PACE, raceName:'', raceKm:0, raceYear:new Date().getFullYear(), legs}; }
+    return {startPlanned:defaultStart(), startActual:null, cutoffH:48, targetH:DEF_TARGET, paceMin:DEF_PACE, raceName:'', raceKm:0, raceYear:new Date().getFullYear(), teamNum:'0565', donateUrl:'https://event.oxfamtrailwalker.org.hk/en/Donation/Sponsorship?tId=r1tQWNW__bA%3D', ejsServiceId:'', ejsTemplateId:'', ejsPublicKey:'', smsNumbers:[], legs}; }
 
   async function load(){
     initFirebase();
