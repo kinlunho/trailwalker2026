@@ -306,6 +306,9 @@
       <div class="row"><span id="barleft">Start</span><span id="barright">Section end</span></div>
       <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:2px"><span id="gradeBadge"></span><span id="elevBadge"></span></div>
       <div id="lookaheadAlert" style="display:none;font-size:11px;margin-top:6px;padding:5px 9px;border-radius:8px;align-items:center;gap:6px"></div>
+      <div id="offRouteBanner" style="display:none;align-items:center;gap:6px;font-size:12px;font-weight:700;margin-top:6px;padding:7px 10px;border-radius:8px;background:rgba(226,115,78,.18);color:var(--behind)">
+        <span>⚠</span><span id="offRouteText"></span>
+      </div>
       <div class="bar" id="bar"><span class="tgt" id="tgtmark" style="left:0%"></span><span class="mkr" id="mkrmark" style="display:none;left:0%"></span><i style="width:0%"></i></div>
     </div>
   </div>
@@ -1416,10 +1419,43 @@
     setTimeout(()=>initMap(),400);
   }
   let _gpxData=null,_gpsWatch=null,_gpsAutoActive=false;
+  // ── OFF-ROUTE DETECTION ──────────────────────────────────────
+  let _offRouteSince=null; // timestamp when deviation first exceeded threshold
+  let _offRouteActive=false;
+  const OFFROUTE_THRESHOLD_M=80; // distance from route to be considered "off"
+  const OFFROUTE_SUSTAIN_MS=90000; // must stay off-route for 90s before alerting (avoids GPS noise false alarms)
+  const ONROUTE_RESUME_M=50; // distance to be considered "back on route" (hysteresis to avoid flicker)
+  function checkOffRoute(distM){
+    const banner=document.getElementById('offRouteBanner');
+    if(distM>OFFROUTE_THRESHOLD_M){
+      if(!_offRouteSince) _offRouteSince=Date.now();
+      const sustainedMs=Date.now()-_offRouteSince;
+      if(sustainedMs>=OFFROUTE_SUSTAIN_MS && !_offRouteActive){
+        _offRouteActive=true;
+        if(banner){
+          banner.style.display='flex';
+          banner.querySelector('#offRouteText').textContent='You are '+Math.round(distM)+'m from the route — check your direction';
+        }
+      } else if(_offRouteActive && banner){
+        banner.querySelector('#offRouteText').textContent='You are '+Math.round(distM)+'m from the route — check your direction';
+      }
+    } else if(distM<ONROUTE_RESUME_M){
+      _offRouteSince=null;
+      if(_offRouteActive){
+        _offRouteActive=false;
+        if(banner) banner.style.display='none';
+      }
+    }
+    // if between ONROUTE_RESUME_M and OFFROUTE_THRESHOLD_M, hold current state (hysteresis band)
+  }
+  // ─────────────────────────────────────────────────────────────
+
   function startGPSAutoTrack(){
     if(!navigator.geolocation){document.getElementById('gpsAutoStatus').textContent='GPS unavailable';return;}
     if(_gpsAutoActive){
       navigator.geolocation.clearWatch(_gpsWatch);_gpsAutoActive=false;_gpsWatch=null;
+      _offRouteSince=null;_offRouteActive=false;
+      const orBanner=document.getElementById('offRouteBanner'); if(orBanner) orBanner.style.display='none';
       document.getElementById('gpsAutoBtn').textContent='Start GPS tracking';
       document.getElementById('gpsAutoStatus').textContent='Stopped';return;
     }
@@ -1435,6 +1471,7 @@
         const kmPos=Math.round((RT.frac[bi]||0)*(RT.total_km||100)*10)/10;
         markerSnap={m:0,km:kmPos,lat,lng:lon,t:Date.now(),spd:0};S.markerSnap=markerSnap;
         if(SYNCED&&db){try{db.ref(dbpath()+'/markerSnap').set({m:0,km:kmPos,lat,lng:lon,t:markerSnap.t,spd:0});}catch(e){}}
+        checkOffRoute(bd*1000); // pass distance to nearest route point in metres
       }
       try{const c=compute();
         if(c.action==='arrive'&&c.walkingIdx>=0){
