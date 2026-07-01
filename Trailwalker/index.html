@@ -54,7 +54,8 @@
   #app-root .scroll-pane{padding-top:14px;}
   .topo{position:fixed; inset:0; z-index:0; opacity:.06; pointer-events:none; overflow:hidden;}
 
-  .masthead{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px;}
+  .masthead{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; gap:6px;}
+  .masthead h1{min-width:0; flex-shrink:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .masthead h1{font-size:15px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;}
   .masthead h1 b{color:var(--lamp);}
   .masthead .sub{font-size:11px; color:var(--faint); letter-spacing:.12em; text-transform:uppercase;}
@@ -85,13 +86,13 @@
     border:1px solid var(--line); border-radius:18px; padding:18px; margin-bottom:12px;
     box-shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 12px 30px -20px #000;}
   .lbl{font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted);}
-  .herotop{display:flex; gap:8px; justify-content:space-between; align-items:flex-start;}
+  .herotop{display:flex; gap:12px; justify-content:space-between; align-items:flex-start;}
   .markerblock{text-align:right; flex-shrink:0; align-self:flex-start;}
   .markerblock .msel{background:var(--card); border:1px solid var(--line); border-radius:6px; color:var(--ink); font:inherit; font-size:11px; font-weight:700; color-scheme:dark; cursor:pointer; padding:3px 2px; margin-top:3px; width:58px; display:block; margin-left:auto;}
   .nowclock{min-width:0;}
   .nowclock .bigclock{font-size:clamp(24px,7.5vw,31px); font-weight:800; line-height:1; margin-top:4px;
     font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; letter-spacing:.01em;}
-  .nowclock .splitline{font-size:11.5px; color:var(--muted); margin-top:7px; line-height:1.5;}
+  .nowclock .splitline{font-size:11.5px; color:var(--muted); margin-top:7px; line-height:1.5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .nowclock .splitline b{font-weight:700;} .splitline .w{color:var(--ahead);} .splitline .r{color:var(--rest);}
   .finishblock{text-align:right; min-width:0; flex-shrink:0;}
   .finishblock .finish{font-size:clamp(22px,6.8vw,29px); font-weight:800; line-height:1; margin-top:4px;}
@@ -322,7 +323,7 @@
 
 <div class="wrap">
   <div class="freeze-pane">
-  <div class="masthead"><h1 id="raceTitle">Oxfam <b>Trailwalker</b> 100</h1><div style="display:flex;align-items:center;gap:8px"><div class="sub" id="raceDates">20–22 Nov 2026</div><button id="homeNavBtn" aria-label="Home" style="background:var(--card);border:1px solid var(--line);color:var(--muted);border-radius:8px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;flex-shrink:0">🏠</button><button id="editToggle" aria-label="Settings" style="background:var(--card);border:1px solid var(--line);color:var(--muted);border-radius:8px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;flex-shrink:0">⚙</button></div></div>
+  <div class="masthead"><h1 id="raceTitle">Oxfam <b>Trailwalker</b> 100</h1><div style="display:flex;align-items:center;gap:6px;flex-shrink:0"><div class="sub" id="raceDates" style="white-space:nowrap">20–22 Nov 2026</div><button id="homeNavBtn" aria-label="Home" style="background:var(--card);border:1px solid var(--line);color:var(--muted);border-radius:8px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;flex-shrink:0">🏠</button><button id="editToggle" aria-label="Settings" style="background:var(--card);border:1px solid var(--line);color:var(--muted);border-radius:8px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;flex-shrink:0">⚙</button></div></div>
   <div class="syncbar" id="syncbar"></div>
 
   <div class="hero">
@@ -770,7 +771,7 @@
 
   const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const pad=n=>String(n).padStart(2,'0');
-  const clock=d=>DOW[d.getDay()]+' '+pad(d.getHours())+':'+pad(d.getMinutes());
+  const clock=d=>{if(!d||isNaN(d.getTime())) return '—'; return DOW[d.getDay()]+' '+pad(d.getHours())+':'+pad(d.getMinutes());};
   const sky=d=>{const h=d.getHours();return(h>=6&&h<18)?'☀':'☾';};
   function durTxt(m){m=Math.round(m);const s=m<0?'-':'';m=Math.abs(m);return s+Math.floor(m/60)+'h '+pad(m%60)+'m';}
   function shortDur(m){m=Math.round(Math.abs(m));return Math.floor(m/60)+'h'+pad(m%60);}
@@ -2011,8 +2012,10 @@
           const mHrs=remKm/markerSnap.spd;
           const mETA=new Date(Date.now()+mHrs*3600000);
           const mMin=Math.round(mHrs*60);
-          mketaEl.style.display='block';
-          mketaEl.innerHTML='est. (M) '+clock(mETA)+' · ~'+durTxt(mMin);
+          if(mETA&&!isNaN(mETA.getTime())&&isFinite(mMin)){
+            mketaEl.style.display='block';
+            mketaEl.innerHTML='est. (M) '+clock(mETA)+' · ~'+durTxt(mMin);
+          } else { mketaEl.style.display='none'; }
         } else { mketaEl.style.display='none'; }
       } else { mketaEl.style.display='none'; }
     } else { netaEl.innerHTML=''; if(mketaEl) mketaEl.style.display='none'; }
