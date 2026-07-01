@@ -2002,7 +2002,7 @@
     const mketaEl=document.getElementById('markereta');
     if(c.nextETA && c.action==='arrive'){
       const l=S.legs[c.nextIdx]; const mm=Math.round(c.nextMins);
-      netaEl.innerHTML='<span style="color:var(--faint);font-size:10.5px">'+l.name+'</span><br>est. '+clock(c.nextETA)+(mm>=0?' · ~'+mm+'m':' · overdue');
+      netaEl.innerHTML='<span style="color:var(--faint);font-size:10.5px">'+l.name+'</span><br>est. '+clock(c.nextETA)+(mm>=0?' · ~'+durTxt(mm):' · overdue');
       // marker-based ETA
       if(markerSnap&&markerSnap.spd>0){
         const legEndKm=S.legs.slice(0,c.nextIdx+1).reduce((a,l)=>a+l.km,0);
@@ -2012,7 +2012,7 @@
           const mETA=new Date(Date.now()+mHrs*3600000);
           const mMin=Math.round(mHrs*60);
           mketaEl.style.display='block';
-          mketaEl.innerHTML='est. (M) '+clock(mETA)+' · ~'+mMin+'m';
+          mketaEl.innerHTML='est. (M) '+clock(mETA)+' · ~'+durTxt(mMin);
         } else { mketaEl.style.display='none'; }
       } else { mketaEl.style.display='none'; }
     } else { netaEl.innerHTML=''; if(mketaEl) mketaEl.style.display='none'; }
@@ -2262,7 +2262,7 @@
       if(arrived){ const a=D(l.arrival); const dmin=(a-tgt)/MS;
         rt='<div class="plan">target '+clock(tgt)+'</div><div class="act">'+clock(a)+'</div><div class="delta '+(dmin<=0?'ahead':'behind')+'">'+signTxt(dmin)+' vs tgt</div>';
       } else if(i===c.nextIdx && c.nextETA){ const mm=Math.round(c.nextMins);
-        const mtxt= mm>=0 ? '~'+mm+' min' : 'overdue '+(-mm)+'m';
+        const mtxt= mm>=0 ? '~'+durTxt(mm) : 'overdue '+durTxt(-mm);
         rt='<div class="plan">est. arrival</div><div class="act" style="color:var(--lamp)">'+clock(c.nextETA)+'</div><div class="delta" style="color:var(--lamp)">'+mtxt+'</div>';
       } else {
         // show projected arrival for future sections (based on actual pace ratio)
@@ -2372,7 +2372,7 @@
         const over=c.liveRest>l.brk; const rn=document.createElement('div'); rn.className='restnow '+(over?'over':'under');
         const restSec=c.liveRestMs?Math.max(0,Math.floor(c.liveRestMs/1000)):Math.round(c.liveRest*60);
         const rmm=Math.floor(restSec/60); const rss=restSec%60;
-        rn.innerHTML='<span class="t">⏱ '+rmm+':'+(rss<10?'0':'')+rss+'</span><span class="cap">rest · planned '+l.brk+'m'+(over?' — moving on?':'')+'</span>';
+        rn.innerHTML='<span class="t">⏱ '+rmm+':'+(rss<10?'0':'')+rss+'</span><span class="cap">rest · planned '+durTxt(l.brk)+(over?' — moving on?':'')+'</span>';
         el.appendChild(rn);
         if(!READONLY){
         const row=document.createElement('div'); row.className='act-row';
