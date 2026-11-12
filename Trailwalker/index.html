@@ -574,8 +574,8 @@
     <div class="field"><label for="startInput">Planned start</label><input type="datetime-local" id="startInput"></div>
     <div class="field" id="actualStartField" style="display:none"><label for="actualStartInput">Actual start</label><input type="datetime-local" id="actualStartInput"></div>
     <div class="field"><label for="cutoffInput">Cutoff (hours)</label><input type="number" id="cutoffInput" min="1" step="1"></div>
-    <div id="planEdit" style="display:none"></div>
-    <button id="addLegBtn" style="display:none">+ Add section</button>
+    <div id="planEdit"></div>
+    <button id="addLegBtn">+ Add section</button>
     <h3 style="margin-top:16px">Email notifications</h3>
     <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Get email alerts on start, each checkpoint departure and arrival. Powered by EmailJS (free).</div>
     <div class="field"><label for="teamNum">Team number</label><input type="text" id="teamNum" placeholder="0565" style="width:80px;text-align:left"></div>
@@ -744,19 +744,35 @@
             const t=leg.arrival?new Date(leg.arrival).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';
             showToast(leg.name,t); }
           _lastFrontier=newF;
-          render(); tickClock(); } });
+          render(); tickClock(); } },
+          err=>{ SYNCED=false; try{ render(); }catch(e2){} });
         db.ref(dbpath()+'/markerSnap').on('value', snap=>{ const v=snap.val(); markerSnap=v||null; render(); });
       } else {
         try{ const snap=await db.ref(dbpath()).once('value'); const v=snap.val();
           if(v&&v.legs){ S=v; markerSnap=v.markerSnap||null; reconcile();
           // restore emailjs config if missing
           if(!S.ejsServiceId) loadEjsConfig();
-        } else { pushRemote(); } }catch(e){}
+        } else { pushRemote(); } }catch(e){ SYNCED=false; }
       }
     }
+    afterLoadRestore();
+  }
+  function restoreSavedGeometry(){
+    try{
+      if(!S||!S.routeKey) return false;
+      const lib=rlLoad(); const e=lib&&lib[S.routeKey];
+      const gd=e&&e.gpxRoute;
+      if(!gd||!gd.route||!gd.route.length) return false;
+      window.OTW_ROUTE={...gd,cp:(RT.cp&&RT.cp.length)?RT.cp:[],sec_asc:[]};
+      Object.assign(RT,window.OTW_ROUTE);
+      return true;
+    }catch(err){ return false; }
   }
   function pushRemote(){ if(SYNCED && !READONLY && S){ try{ db.ref(dbpath()).set(S); }catch(e){} } }
   function save(){ lsSet(S); pushRemote(); }
+  // called at the end of load(): put the saved route's geometry back, because
+  // OTW_ROUTE is module state and is NOT part of S, so it dies on every reload.
+  function afterLoadRestore(){ restoreSavedGeometry(); }
   function reconcile(){
     if(!Array.isArray(S.legs)||!S.legs.length){ S=fresh(); return; }
     S.legs.forEach(l=>{ if(l.d==null)l.d=2; if(!('route'in l))l.route=''; if(!l.sup)l.sup=false;
@@ -976,6 +992,40 @@
     }catch(e){ _map=null; } }
   function updateMap(c, posKmOverride){ if(!_map) return; const pkm=posKmOverride!=null?posKmOverride:c.posKm; const f=Math.max(0,Math.min(1,pkm/(c.TOTAL||1)));
     const p=routePoint(f); if(p&&_pos)_pos.setLatLng(p); if(_done)_done.setLatLngs(doneCoords(f)); }
+  // -- wake lock -------------------------------------------------
+  // Mobile browsers stop firing watchPosition when the screen locks or the
+  // tab backgrounds. Wake lock keeps the screen alive while tracking; the OS
+  // releases it on tab switch, so re-acquire on visibilitychange.
+  let _wakeLock=null;
+  async function acquireWakeLock(){
+    try{
+      if(!('wakeLock' in navigator)) return false;
+      _wakeLock=await navigator.wakeLock.request('screen');
+      _wakeLock.addEventListener('release',()=>{ _wakeLock=null; });
+      return true;
+    }catch(e){ _wakeLock=null; return false; }
+  }
+  function releaseWakeLock(){ try{ if(_wakeLock){ _wakeLock.release(); _wakeLock=null; } }catch(e){} }
+  // -- GPS staleness ---------------------------------------------
+  // The dangerous failure is silent: fixes stop and nothing says so.
+  let _lastFixTs=0;
+  function renderGpsAge(){
+    const el=document.getElementById('gpsAutoStatus');
+    if(!el||!window._gpsAutoActiveRef||!window._gpsAutoActiveRef()) return;
+    if(!_lastFixTs) return;
+    const ageM=Math.floor((Date.now()-_lastFixTs)/60000);
+    if(ageM>=2){
+      el.textContent='NO GPS FIX for '+ageM+'m - log arrivals manually';
+      el.style.color='#d97b7b'; el.style.fontWeight='600';
+    }
+  }
+  setInterval(renderGpsAge,30000);
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState!=='visible') return;
+    if(window._gpsAutoActiveRef&&window._gpsAutoActiveRef()&&!_wakeLock) acquireWakeLock();
+    renderGpsAge();
+  });
+
   function toggleGPS(){ if(!_map||!navigator.geolocation){ alert('GPS not available'); return; }
     const btn=document.getElementById('gpsBtn');
     if(_gpsOn){ _gpsOn=false; if(_gpsMarker){_map.removeLayer(_gpsMarker);_gpsMarker=null;} if(btn)btn.textContent='Show my GPS'; return; }
@@ -1164,7 +1214,8 @@
     hs.classList.add('show');
     document.body.style.overflow='hidden';
     const resumeBtn=document.getElementById('homeResumeBtn');
-    if(resumeBtn) resumeBtn.style.display=(S&&S.startActual)?'block':'none';
+    if(resumeBtn){ resumeBtn.style.display=(S&&S.legs&&S.legs.length)?'block':'none';
+      resumeBtn.textContent=(S&&S.startActual)?'\u21bb Resume current race':'\u21bb Open '+((S&&S.raceName)||'current race'); }
   }
   function hideHomeScreen(){
     const hs=document.getElementById('homeScreen'); if(!hs) return;
@@ -1215,6 +1266,7 @@
       cpNames:(window._cpNames||{}),
       legs:S.legs.map(l=>({...l,arrival:null,departure:null}))
     };
+    try{ S.routeKey=key; }catch(e){}
     rlSave(lib); rlPopulateSelect();
     // select the saved route in dropdown
     const sel=document.getElementById('routeLibrarySelect');
@@ -1231,6 +1283,7 @@
   function rlLoadRoute(){
     const sel=document.getElementById('routeLibrarySelect'); if(!sel||!sel.value) return;
     const lib=rlLoad(); const entry=lib[sel.value]; if(!entry) return;
+    try{ S.routeKey=sel.value; }catch(e){}
     // restore route
     const gd=entry.gpxRoute;
     window.OTW_ROUTE={...gd,cp:[],sec_asc:[]};
@@ -1569,6 +1622,7 @@
     setTimeout(()=>initMap(),400);
   }
   let _gpxData=null,_gpsWatch=null,_gpsAutoActive=false;
+  window._gpsAutoActiveRef=()=>_gpsAutoActive;
   // ── OFF-ROUTE DETECTION ──────────────────────────────────────
   let _offRouteSince=null; // timestamp when deviation first exceeded threshold
   let _offRouteActive=false;
@@ -1604,17 +1658,22 @@
     if(!navigator.geolocation){document.getElementById('gpsAutoStatus').textContent='GPS unavailable';return;}
     if(_gpsAutoActive){
       navigator.geolocation.clearWatch(_gpsWatch);_gpsAutoActive=false;_gpsWatch=null;
+      releaseWakeLock(); _lastFixTs=0;
       _offRouteSince=null;_offRouteActive=false;
       const orBanner=document.getElementById('offRouteBanner'); if(orBanner) orBanner.style.display='none';
       document.getElementById('gpsAutoBtn').textContent='Start GPS tracking';
       document.getElementById('gpsAutoStatus').textContent='Stopped';return;
     }
     _gpsAutoActive=true;
+    acquireWakeLock();
     document.getElementById('gpsAutoBtn').textContent='Stop GPS tracking';
     document.getElementById('gpsAutoStatus').textContent='Acquiring GPS...';
     _gpsWatch=navigator.geolocation.watchPosition(pos=>{
       const lat=pos.coords.latitude,lon=pos.coords.longitude,acc=Math.round(pos.coords.accuracy);
-      document.getElementById('gpsAutoStatus').textContent=lat.toFixed(5)+','+lon.toFixed(5)+' +/-'+acc+'m';
+      _lastFixTs=Date.now();
+      const _st=document.getElementById('gpsAutoStatus');
+      _st.style.color=''; _st.style.fontWeight='';
+      _st.textContent=lat.toFixed(5)+','+lon.toFixed(5)+' +/-'+acc+'m';
       if(RT.route&&RT.route.length){
         let bi=0,bd=Infinity;
         RT.route.forEach((p,i)=>{const d=haversineKm(lat,lon,p[0],p[1]);if(d<bd){bd=d;bi=i;}});
