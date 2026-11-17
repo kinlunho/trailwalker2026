@@ -323,7 +323,7 @@
 
 <div class="wrap">
   <div class="freeze-pane">
-  <div class="masthead"><h1 id="raceTitle">Oxfam <b>Trailwalker</b> 100</h1><div style="display:flex;align-items:center;gap:6px;flex-shrink:0"><div class="sub" id="raceDates" style="white-space:nowrap">20–22 Nov 2026 · <span style="opacity:.6">b12nov-4</span></div><button id="homeNavBtn" aria-label="Home" style="background:var(--card);border:1px solid var(--line);color:var(--muted);border-radius:8px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;flex-shrink:0">🏠</button><button id="editToggle" aria-label="Settings" style="background:var(--card);border:1px solid var(--line);color:var(--muted);border-radius:8px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;flex-shrink:0">⚙</button></div></div>
+  <div class="masthead"><h1 id="raceTitle">Oxfam <b>Trailwalker</b> 100</h1><div style="display:flex;align-items:center;gap:6px;flex-shrink:0"><div class="sub" id="raceDates" style="white-space:nowrap">20–22 Nov 2026 · <span style="opacity:.6">b17nov-1</span></div><button id="homeNavBtn" aria-label="Home" style="background:var(--card);border:1px solid var(--line);color:var(--muted);border-radius:8px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;flex-shrink:0">🏠</button><button id="editToggle" aria-label="Settings" style="background:var(--card);border:1px solid var(--line);color:var(--muted);border-radius:8px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;flex-shrink:0">⚙</button></div></div>
   <div class="syncbar" id="syncbar"></div>
 
   <div class="hero">
@@ -587,6 +587,13 @@
     <textarea id="smsNumbers" rows="3" style="width:100%;margin-top:6px;background:var(--card);border:1px solid var(--line);border-radius:8px;color:var(--ink);font:inherit;font-size:13px;padding:8px;color-scheme:dark;resize:vertical" placeholder="supporter1@gmail.com&#10;supporter2@gmail.com"></textarea>
     <button class="btn" id="testSmsBtn" style="margin-top:6px">Send test email</button>
     <div id="smsStatus" style="font-size:12px;color:var(--muted);margin-top:4px"></div>
+    <h3 style="margin-top:18px">Race code</h3>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">This race syncs under code <b id="raceCodeTxt">—</b>. Your crew's watch link uses it. A new code creates a separate race — the old one stays safe under its own code and you can switch back.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn" id="testRunBtn">New code, keep plan (test run)</button>
+      <button class="btn" id="backToRaceBtn" style="display:none">↩ Back to <span id="prevRaceTxt"></span></button>
+    </div>
+    <div id="raceCodeStatus" style="font-size:12px;color:var(--muted);margin-top:4px"></div>
     <h3 style="margin-top:18px;color:var(--behind)">Danger zone</h3>
     <div style="font-size:12px;color:var(--muted);margin-bottom:10px">These actions affect live race data. Use with care.</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -787,6 +794,17 @@
       return true;
     }catch(err){ return false; }
   }
+  const PREVKEY='oxfam2026_prevrace';
+  function gotoCode(code,wipePlan){
+    try{
+      localStorage.setItem(PREVKEY,RACE);
+      localStorage.setItem('oxfam2026_race',code);
+      if(wipePlan){ try{ localStorage.removeItem(LKEY); }catch(e){} }
+      const u=new URL(location); u.searchParams.set('race',code);
+      location.href=u.toString();
+    }catch(e){ alert('Could not switch race code: '+(e&&e.message||e)); }
+  }
+  function newCode(){ return 'TW'+Math.random().toString(36).slice(2,9).toUpperCase(); }
   function pushRemote(){ if(SYNCED && !READONLY && S){ try{ db.ref(dbpath()).set(S); }catch(e){} } }
   function save(){ lsSet(S); pushRemote(); }
   // called at the end of load(): put the saved route's geometry back, because
@@ -3030,7 +3048,26 @@
     const homeNavBtn=document.getElementById('homeNavBtn');
     if(homeNavBtn) homeNavBtn.onclick=showHomeScreen;
     const homeNewBtn=document.getElementById('homeNewRaceBtn');
-    if(homeNewBtn) homeNewBtn.onclick=()=>{ hideHomeScreen(); document.getElementById('editToggle').click(); setTimeout(()=>{ const gf=document.getElementById('gpxFile'); if(gf) gf.scrollIntoView({behavior:'smooth',block:'center'}); },350); };
+    if(homeNewBtn) homeNewBtn.onclick=()=>{
+      if(S&&S.startActual){ alert('A race is in progress under code '+RACE+'.\n\nFinish it, or use Settings \u2192 Danger zone \u2192 Reset race times, before starting a new race.'); return; }
+      if(!confirm('Start a brand new race?\n\nThis creates a new race code and clears the current plan so you can import a GPX.\n\nYour current race ('+RACE+') stays saved under its own code \u2014 you can switch back from Settings \u2192 Race code.')) return;
+      gotoCode(newCode(), true);
+    };
+    const rct=document.getElementById('raceCodeTxt'); if(rct) rct.textContent=RACE;
+    const trb=document.getElementById('testRunBtn');
+    if(trb) trb.onclick=()=>{
+      if(!confirm('Start a test run?\n\nThis creates a NEW race code and copies your current plan to it, so arrivals you log while testing do not touch race '+RACE+'.\n\nYou can switch back from this same panel.')) return;
+      gotoCode(newCode(), false);
+    };
+    try{
+      const prev=localStorage.getItem(PREVKEY);
+      const btb=document.getElementById('backToRaceBtn');
+      if(btb && prev && prev!==RACE){
+        document.getElementById('prevRaceTxt').textContent=prev;
+        btb.style.display='';
+        btb.onclick=()=>{ if(!confirm('Switch back to race '+prev+'?\n\nIts saved state on the server will replace what is on this device.')) return; gotoCode(prev,false); };
+      }
+    }catch(e){}
     const homeResumeBtn=document.getElementById('homeResumeBtn');
     if(homeResumeBtn) homeResumeBtn.onclick=hideHomeScreen;
   });
