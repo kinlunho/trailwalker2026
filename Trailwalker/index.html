@@ -323,7 +323,7 @@
 
 <div class="wrap">
   <div class="freeze-pane">
-  <div class="masthead"><h1 id="raceTitle">Oxfam <b>Trailwalker</b> 100</h1><div style="display:flex;align-items:center;gap:6px;flex-shrink:0"><div class="sub" id="raceDates" style="white-space:nowrap">20–22 Nov 2026 · <span style="opacity:.6">b17nov-4</span></div><button id="homeNavBtn" aria-label="Home" style="background:var(--card);border:1px solid var(--line);color:var(--muted);border-radius:8px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;flex-shrink:0">🏠</button><button id="editToggle" aria-label="Settings" style="background:var(--card);border:1px solid var(--line);color:var(--muted);border-radius:8px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;flex-shrink:0">⚙</button></div></div>
+  <div class="masthead"><h1 id="raceTitle">Oxfam <b>Trailwalker</b> 100</h1><div style="display:flex;align-items:center;gap:6px;flex-shrink:0"><div class="sub" id="raceDates" style="white-space:nowrap">20–22 Nov 2026 · <span style="opacity:.6">b18nov-1</span></div><button id="homeNavBtn" aria-label="Home" style="background:var(--card);border:1px solid var(--line);color:var(--muted);border-radius:8px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;flex-shrink:0">🏠</button><button id="editToggle" aria-label="Settings" style="background:var(--card);border:1px solid var(--line);color:var(--muted);border-radius:8px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;flex-shrink:0">⚙</button></div></div>
   <div class="syncbar" id="syncbar"></div>
 
   <div class="hero">
@@ -650,6 +650,7 @@
   // =============================================================
   const MARKERS=[[1, 0.5, 22.398055, 114.320699], [2, 1.0, 22.399763, 114.324671], [3, 1.5, 22.396042, 114.327656], [4, 2.0, 22.393535, 114.330997], [5, 2.5, 22.389653, 114.333064], [6, 3.0, 22.38627, 114.335986], [7, 3.5, 22.382487, 114.334603], [8, 4.0, 22.379212, 114.337666], [9, 4.5, 22.37561, 114.339551], [10, 5.0, 22.370925, 114.34212], [11, 5.5, 22.368731, 114.344096], [12, 6.0, 22.365374, 114.347531], [13, 6.5, 22.36246, 114.349925], [14, 7.0, 22.361464, 114.353153], [15, 7.5, 22.363466, 114.356729], [16, 8.0, 22.359952, 114.359595], [17, 8.5, 22.35955, 114.363169], [18, 9.0, 22.360118, 114.36751], [19, 9.5, 22.36082, 114.371391], [20, 10.0, 22.364677, 114.372999], [21, 10.5, 22.368107, 114.374555], [22, 11.0, 22.371806, 114.373266], [23, 11.5, 22.374236, 114.375752], [24, 12.0, 22.377852, 114.376974], [25, 12.5, 22.379822, 114.379654], [26, 13.0, 22.383334, 114.37825], [27, 13.5, 22.387394, 114.377517], [28, 14.0, 22.389715, 114.375115], [29, 14.5, 22.388268, 114.371788], [30, 15.0, 22.387254, 114.367892], [31, 15.5, 22.390562, 114.366102], [32, 16.0, 22.392524, 114.368486], [33, 16.5, 22.396407, 114.370502], [34, 17.0, 22.40022, 114.369948], [35, 17.5, 22.402895, 114.371518], [36, 18.0, 22.406019, 114.373801], [37, 18.5, 22.409729, 114.373838], [38, 19.0, 22.41326, 114.372529], [39, 19.5, 22.417228, 114.371953], [40, 20.0, 22.419378, 114.368824], [41, 20.5, 22.42082, 114.36619], [42, 21.0, 22.420827, 114.361694], [43, 21.5, 22.421499, 114.357431], [44, 22.0, 22.422025, 114.35281], [45, 22.5, 22.421489, 114.349305], [46, 23.0, 22.423205, 114.345331], [47, 23.5, 22.424896, 114.3416], [48, 24.0, 22.424954, 114.337102], [49, 24.5, 22.42227, 114.333515], [50, 25.0, 22.421713, 114.330385], [51, 25.5, 22.422148, 114.326267], [52, 26.0, 22.422252, 114.321832], [53, 26.5, 22.424266, 114.318125], [54, 27.0, 22.426293, 114.313871], [55, 27.5, 22.428273, 114.310014], [56, 28.0, 22.427201, 114.307527], [57, 28.5, 22.423649, 114.306923], [58, 29.0, 22.420179, 114.307029], [59, 29.5, 22.417013, 114.306324], [60, 30.0, 22.414886, 114.302654], [61, 30.5, 22.415181, 114.298294], [62, 31.0, 22.41531, 114.294034], [63, 31.5, 22.416603, 114.290947], [64, 32.0, 22.413914, 114.287572], [65, 32.5, 22.410381, 114.287151], [66, 33.0, 22.410114, 114.28298], [67, 33.5, 22.406336, 114.281106], [68, 34.0, 22.404185, 114.279678], [69, 34.5, 22.402574, 114.276434], [70, 35.0, 22.400622, 114.273582], [71, 35.5, 22.398017, 114.27114], [72, 36.0, 22.400939, 114.269643], [73, 36.5, 22.402137, 114.265389], [74, 37.0, 22.403561, 114.263155], [75, 37.5, 22.406246, 114.261101], [76, 38.0, 22.406987, 114.257433], [77, 38.5, 22.406681, 114.253094], [78, 39.0, 22.403088, 114.253198], [79, 39.5, 22.399788, 114.253091], [80, 40.0, 22.397913, 114.251091], [81, 40.5, 22.395078, 114.250453], [82, 41.0, 22.391455, 114.252276], [83, 41.5, 22.38902, 114.248982], [84, 42.0, 22.386306, 114.247109], [85, 42.5, 22.382281, 114.24641], [86, 43.0, 22.379482, 114.243541], [87, 43.5, 22.376406, 114.240894], [88, 44.0, 22.373442, 114.237541], [89, 44.5, 22.371297, 114.233549], [90, 45.0, 22.370753, 114.228886], [91, 45.5, 22.368562, 114.226569], [92, 46.0, 22.364543, 114.224629], [93, 46.5, 22.36108, 114.222334], [94, 47.0, 22.361869, 114.219876], [95, 47.5, 22.360124, 114.216572], [96, 48.0, 22.359794, 114.212802], [97, 48.5, 22.356615, 114.213972], [98, 49.0, 22.35519, 114.210982], [99, 49.5, 22.354651, 114.206859], [100, 50.0, 22.354539, 114.20242], [101, 50.5, 22.355657, 114.198378], [102, 51.0, 22.355781, 114.194063], [103, 51.5, 22.355335, 114.190968], [104, 52.0, 22.35522, 114.18778], [105, 52.5, 22.353824, 114.183738], [106, 53.0, 22.351082, 114.181824], [107, 53.5, 22.350031, 114.177701], [108, 54.0, 22.350281, 114.173057], [109, 54.5, 22.349822, 114.169243], [110, 55.0, 22.349132, 114.166353], [111, 55.5, 22.349776, 114.162599], [112, 56.0, 22.349681, 114.160144], [113, 56.5, 22.34964, 114.156889], [114, 57.0, 22.349071, 114.153699], [115, 57.5, 22.351113, 114.153855], [116, 58.0, 22.354607, 114.15186], [117, 58.5, 22.358262, 114.150857], [118, 59.0, 22.362471, 114.150008], [119, 59.5, 22.365702, 114.151327], [120, 60.0, 22.368534, 114.148401], [121, 60.5, 22.371815, 114.146139], [122, 61.0, 22.375177, 114.145651], [123, 61.5, 22.378446, 114.144615], [124, 62.0, 22.379843, 114.148605], [125, 62.5, 22.38133, 114.152189], [126, 63.0, 22.38285, 114.156047], [127, 63.5, 22.385486, 114.158524], [128, 64.0, 22.388429, 114.16162], [129, 64.5, 22.391786, 114.164296], [130, 65.0, 22.394444, 114.167938], [131, 65.5, 22.398169, 114.166761], [132, 66.0, 22.400932, 114.167837], [133, 66.5, 22.404361, 114.167156], [134, 67.0, 22.407912, 114.16592], [135, 67.5, 22.411521, 114.164574], [136, 68.0, 22.412656, 114.160068], [137, 68.5, 22.412042, 114.157891], [138, 69.0, 22.412942, 114.153521], [139, 69.5, 22.415418, 114.14935], [140, 70.0, 22.416667, 114.145856], [141, 70.5, 22.41659, 114.141165], [142, 71.0, 22.417463, 114.137222], [143, 71.5, 22.416765, 114.132778], [144, 72.0, 22.416873, 114.128226], [145, 72.5, 22.414873, 114.124697], [146, 73.0, 22.413109, 114.124109], [147, 73.5, 22.409451, 114.12557], [148, 74.0, 22.40806, 114.124776], [149, 74.5, 22.406789, 114.123569], [150, 75.0, 22.406829, 114.121505], [151, 75.5, 22.410098, 114.119881], [152, 76.0, 22.410687, 114.117087], [153, 76.5, 22.408371, 114.113488], [154, 77.0, 22.405859, 114.110438], [155, 77.5, 22.404929, 114.106999], [156, 78.0, 22.40704, 114.104764], [157, 78.5, 22.407057, 114.100759], [158, 79.0, 22.403993, 114.09757], [159, 79.5, 22.400806, 114.094916], [160, 80.0, 22.39943, 114.090893], [161, 80.5, 22.40152, 114.08743], [162, 81.0, 22.400449, 114.083569], [163, 81.5, 22.397452, 114.080721], [164, 82.0, 22.396475, 114.076501], [165, 82.5, 22.394387, 114.073592], [166, 83.0, 22.392611, 114.071716], [167, 83.5, 22.392525, 114.068853], [168, 84.0, 22.390976, 114.066122], [169, 84.5, 22.390468, 114.062894], [170, 85.0, 22.393352, 114.061175], [171, 85.5, 22.396001, 114.058233], [172, 86.0, 22.397569, 114.053718], [173, 86.5, 22.397467, 114.049317], [174, 87.0, 22.396989, 114.046398], [175, 87.5, 22.398228, 114.043844], [176, 88.0, 22.40206, 114.044016], [177, 88.5, 22.405459, 114.041422], [178, 89.0, 22.409226, 114.039203], [179, 89.5, 22.410895, 114.036284], [180, 90.0, 22.409586, 114.032758], [181, 90.5, 22.407911, 114.033657], [182, 91.0, 22.405041, 114.035428], [183, 91.5, 22.403079, 114.035801], [184, 92.0, 22.399412, 114.034376], [185, 92.5, 22.396546, 114.032481], [186, 93.0, 22.394929, 114.028589], [187, 93.5, 22.393022, 114.025788], [188, 94.0, 22.392138, 114.023126], [189, 94.5, 22.391177, 114.020221], [190, 95.0, 22.387664, 114.020548], [191, 95.5, 22.384654, 114.019557], [192, 96.0, 22.382, 114.016412], [193, 96.5, 22.38178, 114.013417], [194, 97.0, 22.380245, 114.009527], [195, 97.5, 22.379278, 114.00506], [196, 98.0, 22.378351, 114.001835], [197, 98.5, 22.378745, 113.998635], [198, 99.0, 22.378195, 113.99555], [199, 99.5, 22.378797, 113.991415], [200, 100.0, 22.376008, 113.990303]];
   const SEC_ELE={"Section 1A":{"ele":[17.0,18.0,18.0,58.0,94.0,87.0,80.0,77.0,61.0,58.0,56.0,82.0,107.0,121.0,93.0,85.0,87.0,73.0,75.0,73.0],"min":17.0,"max":121.0},"Section 1B":{"ele":[73.0,64.0,56.0,52.0,52.0,55.0,69.0,77.0,84.0,94.0,94.0,95.0,99.0,103.0,80.0,57.0,27.0,15.0,7.0,6.0],"min":6.0,"max":103.0},"Section 1C":{"ele":[6.0,11.0,54.0,106.0,156.0,206.0,263.0,290.0,292.0,229.0,203.0,185.0,180.0,169.0,140.0,113.0,66.0,27.0,13.0,10.0],"min":6.0,"max":292.0},"Section 2":{"ele":[10.0,4.0,40.0,74.0,29.0,6.0,11.0,22.0,73.0,146.0,105.0,50.0,18.0,12.0,7.0,42.0,98.0,120.0,131.0,162.0],"min":4.0,"max":162.0},"Section 3":{"ele":[162.0,302.0,402.0,377.0,339.0,311.0,310.0,334.0,269.0,204.0,248.0,212.0,207.0,293.0,363.0,333.0,298.0,240.0,115.0,81.0],"min":81.0,"max":402.0},"Section 4":{"ele":[81.0,147.0,216.0,248.0,221.0,342.0,386.0,543.0,512.0,416.0,392.0,379.0,351.0,314.0,382.0,467.0,414.0,362.0,366.0,431.0],"min":81.0,"max":543.0},"Section 5A":{"ele":[431.0,419.0,394.0,387.0,391.0,388.0,384.0,396.0,403.0,411.0,413.0,415.0,431.0,453.0,479.0,499.0,476.0,464.0,451.0,438.0],"min":384.0,"max":499.0},"Section 5B":{"ele":[438.0,396.0,378.0,326.0,304.0,368.0,403.0,373.0,349.0,374.0,373.0,341.0,311.0,318.0,316.0,342.0,424.0,420.0,372.0,285.0],"min":285.0,"max":438.0},"Section 6":{"ele":[285.0,242.0,232.0,237.0,230.0,221.0,204.0,181.0,158.0,161.0,138.0,126.0,160.0,184.0,200.0,226.0,254.0,273.0,266.0,257.0],"min":126.0,"max":285.0},"Section 7A":{"ele":[257.0,237.0,237.0,226.0,214.0,214.0,218.0,218.0,232.0,237.0,237.0,238.0,247.0,247.0,262.0,262.0,262.0,259.0,259.0,255.0],"min":214.0,"max":262.0},"Section 7B":{"ele":[255.0,204.0,196.0,239.0,330.0,376.0,429.0,474.0,385.0,360.0,393.0,411.0,446.0,484.0,515.0,564.0,578.0,561.0,437.0,399.0],"min":196.0,"max":578.0},"Section 8":{"ele":[399.0,520.0,621.0,668.0,705.0,764.0,735.0,724.0,809.0,859.0,912.0,883.0,854.0,804.0,766.0,738.0,677.0,598.0,536.0,478.0],"min":399.0,"max":912.0},"Section 9":{"ele":[478.0,483.0,491.0,487.0,507.0,514.0,445.0,392.0,387.0,383.0,341.0,295.0,264.0,231.0,218.0,191.0,152.0,97.0,77.0,75.0],"min":75.0,"max":514.0},"Section 10A":{"ele":[75.0,88.0,100.0,114.0,92.0,62.0,59.0,100.0,115.0,138.0,151.0,142.0,157.0,143.0,142.0,149.0,176.0,215.0,211.0,206.0],"min":59.0,"max":215.0},"Section 10B":{"ele":[206.0,157.0,140.0,90.0,78.0,69.0,52.0,67.0,69.0,68.0,64.0,81.0,68.0,75.0,59.0,76.0,72.0,76.0,47.0,36.0],"min":36.0,"max":206.0}};
+  const BUILD='b18nov-1';
   let markerSnap=null;
   let WX={warnings:[], forecast:[], temp:null, humid:null, lastFetch:0};
     let db=null, SYNCED=false;
@@ -1020,7 +1021,7 @@
       nextIdx,nextETA,nextMins,posKm,mv17,cum17,vs17Min:(mv17-cum17)};
   }
 
-  let _map=null,_pos=null,_done=null,_gpsMarker=null,_gpsOn=false,_mapHidden=false;
+  let _map=null,_pos=null,_posHalo=null,_done=null,_gpsMarker=null,_gpsOn=false,_mapHidden=false,_gpsLocalWatch=null;
   const RT=(window.OTW_ROUTE||{route:[],frac:[],cp:[]});
   function routePoint(f){ const R=RT.route,Fr=RT.frac; if(!R.length) return null; f=Math.max(0,Math.min(1,f));
     let lo=0,hi=Fr.length-1; while(lo<hi){const m=(lo+hi)>>1; if(Fr[m]<f)lo=m+1; else hi=m;}
@@ -1033,9 +1034,12 @@
       L.polyline(RT.route,{color:'#5b6f7c',weight:3,opacity:.65}).addTo(_map);
       _done=L.polyline([],{color:'#5fb98f',weight:5,opacity:.95}).addTo(_map);
       L.circleMarker(RT.route[0],{radius:6,color:'#fff',weight:2,fillColor:'#6aa3c4',fillOpacity:1}).addTo(_map).bindTooltip('Start');
-      L.circleMarker(RT.route[RT.route.length-1],{radius:6,color:'#fff',weight:2,fillColor:'#f4b24a',fillOpacity:1}).addTo(_map).bindTooltip('Finish');
+      L.circleMarker(RT.route[RT.route.length-1],{radius:6,color:'#fff',weight:2,fillColor:'#22c55e',fillOpacity:1}).addTo(_map).bindTooltip('Finish');
       (RT.cp||[]).forEach(c=>{ const p=routePoint(c[1]); if(p) L.circleMarker(p,{radius:5,color:'#10161c',weight:1.5,fillColor:'#f4b24a',fillOpacity:1}).addTo(_map).bindTooltip(c[0]); });
-      _pos=L.circleMarker(RT.route[0],{radius:8,color:'#1a1206',weight:2,fillColor:'#f4b24a',fillOpacity:1}).addTo(_map).bindTooltip('You');
+      // Runner position — deliberately NOT the checkpoint colour. Magenta on
+      // white reads instantly against green terrain and orange checkpoints.
+      _posHalo=L.circleMarker(RT.route[0],{radius:14,color:'#ec4899',weight:2,opacity:.55,fill:false}).addTo(_map);
+      _pos=L.circleMarker(RT.route[0],{radius:9,color:'#ffffff',weight:3,fillColor:'#ec4899',fillOpacity:1}).addTo(_map).bindTooltip('Runner');
       _map.fitBounds(L.polyline(RT.route).getBounds(),{padding:[18,18]});
       setTimeout(()=>{try{_map.invalidateSize();}catch(e){}},200);
       _map.on('click',e=>{
@@ -1054,7 +1058,13 @@
       });
     }catch(e){ _map=null; } }
   function updateMap(c, posKmOverride){ if(!_map) return; const pkm=posKmOverride!=null?posKmOverride:c.posKm; const f=Math.max(0,Math.min(1,pkm/(c.TOTAL||1)));
-    const p=routePoint(f); if(p&&_pos)_pos.setLatLng(p); if(_done)_done.setLatLngs(doneCoords(f)); }
+    const p=routePoint(f); if(p&&_pos)_pos.setLatLng(p); if(p&&_posHalo)_posHalo.setLatLng(p);
+    if(p&&_pos){ try{
+      const t=markerSnap&&markerSnap.t; let tip='Runner';
+      if(t){ const am=Math.floor((Date.now()-t)/60000); tip='Runner \u00b7 position '+(am<1?'just now':am+'m ago'); }
+      _pos.setTooltipContent(tip);
+    }catch(e){} }
+    if(_done)_done.setLatLngs(doneCoords(f)); }
   // -- wake lock -------------------------------------------------
   // Mobile browsers stop firing watchPosition when the screen locks or the
   // tab backgrounds. Wake lock keeps the screen alive while tracking; the OS
@@ -1089,13 +1099,28 @@
     renderGpsAge();
   });
 
+  // One GPS control. For the runner this starts the tracker that PUBLISHES
+  // position to the crew (markerSnap -> Firebase); the blue dot is drawn from
+  // that same fix, so there is only ever one watchPosition running.
+  // A crew member (READONLY) gets a local-only dot for their own position.
   function toggleGPS(){ if(!_map||!navigator.geolocation){ alert('GPS not available'); return; }
     const btn=document.getElementById('gpsBtn');
-    if(_gpsOn){ _gpsOn=false; if(_gpsMarker){_map.removeLayer(_gpsMarker);_gpsMarker=null;} if(btn)btn.textContent='Show my GPS'; return; }
-    _gpsOn=true; if(btn)btn.textContent='GPS on';
-    navigator.geolocation.watchPosition(pos=>{ const ll=[pos.coords.latitude,pos.coords.longitude];
-      if(!_gpsMarker){ _gpsMarker=L.circleMarker(ll,{radius:7,color:'#fff',weight:2,fillColor:'#3b82f6',fillOpacity:1}).addTo(_map).bindTooltip('GPS'); }
-      else _gpsMarker.setLatLng(ll); }, ()=>{ if(btn)btn.textContent='GPS blocked'; }, {enableHighAccuracy:true,maximumAge:10000}); }
+    if(_gpsOn){ _gpsOn=false;
+      if(_gpsMarker){_map.removeLayer(_gpsMarker);_gpsMarker=null;}
+      if(_gpsLocalWatch!=null){ try{navigator.geolocation.clearWatch(_gpsLocalWatch);}catch(e){} _gpsLocalWatch=null; }
+      if(!READONLY){ try{ if(window._gpsAutoActiveRef&&window._gpsAutoActiveRef()){ const ab=document.getElementById('gpsAutoBtn'); if(ab) ab.click(); } }catch(e){} }
+      if(btn)btn.textContent='Show my GPS'; return; }
+    _gpsOn=true;
+    if(READONLY){
+      if(btn)btn.textContent='GPS on';
+      _gpsLocalWatch=navigator.geolocation.watchPosition(pos=>{ const ll=[pos.coords.latitude,pos.coords.longitude];
+        if(!_gpsMarker){ _gpsMarker=L.circleMarker(ll,{radius:6,color:'#fff',weight:2,fillColor:'#3b82f6',fillOpacity:1}).addTo(_map).bindTooltip('Me'); }
+        else _gpsMarker.setLatLng(ll); }, ()=>{ if(btn)btn.textContent='GPS blocked'; }, {enableHighAccuracy:true,maximumAge:10000});
+      return;
+    }
+    if(btn)btn.textContent='GPS on \u00b7 sharing';
+    try{ if(window._gpsAutoActiveRef&&!window._gpsAutoActiveRef()){ const ab=document.getElementById('gpsAutoBtn'); if(ab) ab.click(); } }catch(e){}
+  }
   function setMap(h){ const w=document.querySelector('.mapwrap'),b=document.getElementById('mapToggle');
     if(w)w.style.display=h?'none':''; if(b)b.textContent=h?'Show map':'Hide map';
     try{localStorage.setItem('oxfam_maphidden',h?'1':'');}catch(e){}
@@ -1742,6 +1767,9 @@
         RT.route.forEach((p,i)=>{const d=haversineKm(lat,lon,p[0],p[1]);if(d<bd){bd=d;bi=i;}});
         const kmPos=Math.round((RT.frac[bi]||0)*(RT.total_km||100)*10)/10;
         markerSnap={m:0,km:kmPos,lat,lng:lon,t:Date.now(),spd:0};S.markerSnap=markerSnap;
+        if(_gpsOn&&_map){ const ll=[lat,lon];
+          if(!_gpsMarker){ _gpsMarker=L.circleMarker(ll,{radius:6,color:'#fff',weight:2,fillColor:'#3b82f6',fillOpacity:1}).addTo(_map).bindTooltip('My GPS'); }
+          else _gpsMarker.setLatLng(ll); }
         if(SYNCED&&db){try{db.ref(dbpath()+'/markerSnap').set({m:0,km:kmPos,lat,lng:lon,t:markerSnap.t,spd:0});}catch(e){}}
         checkOffRoute(bd*1000); // pass distance to nearest route point in metres
       }
@@ -2628,7 +2656,7 @@
       if(st2){ const en=new Date(st2.getTime()+S.targetH*3600000);
         const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
         const fd=d=>d.getDate()+' '+mo[d.getMonth()];
-        _rd.textContent=(st2.getDate()===en.getDate()?fd(st2):fd(st2)+'–'+fd(en))+' '+(S.raceYear||st2.getFullYear()); } }
+        _rd.innerHTML=(st2.getDate()===en.getDate()?fd(st2):fd(st2)+'–'+fd(en))+' '+(S.raceYear||st2.getFullYear())+' <span style="opacity:.55">· '+BUILD+'</span>'; } }
     const eRN=document.getElementById('raceNameInput'); if(eRN&&!eRN.matches(':focus'))eRN.value=S.raceName||'';
     const eRK=document.getElementById('raceKmInput'); if(eRK&&!eRK.matches(':focus'))eRK.value=S.raceKm||'';
     const eRY=document.getElementById('raceYearInput'); if(eRY&&!eRY.matches(':focus'))eRY.value=S.raceYear||new Date().getFullYear();
